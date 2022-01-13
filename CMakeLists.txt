@@ -17,7 +17,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 add_executable(
     Blomp
     "src/Blomp.cpp"
+    "src/Image.cpp"
     "vendor/stb_image/stb_image.cpp"
+    "vendor/stb_image/stb_image_write.cpp"
 )
 
 target_include_directories(
