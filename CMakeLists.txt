@@ -18,6 +18,8 @@ add_executable(
     Blomp
     "src/Blomp.cpp"
     "src/Image.cpp"
+    "src/Blocks.cpp"
+    "src/BlockTree.cpp"
     "vendor/stb_image/stb_image.cpp"
     "vendor/stb_image/stb_image_write.cpp"
 )
