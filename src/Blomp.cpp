@@ -18,8 +18,8 @@ const char* helpText =
 "  dec          Blomp -> Image\n"
 "\n"
 "Options:\n"
-"  -w [int]     Base block width exponent. Default: 5\n"
-"  -h [int]     Base block height exponent. Default: 5\n"
+"  -w [int]     Base block width exponent. Default: 4\n"
+"  -h [int]     Base block height exponent. Default: 4\n"
 "  -v [float]   Variation threshold. Default: 0.02\n"
 "  -o [string]  Output filename. Default: [inFile] with changed file extension.\n"
 "\n"
@@ -50,8 +50,8 @@ int main(int argc, const char** argv, const char** env)
     Blomp::FileHeader fileHeader;
 
     Blomp::BlockTreeDesc btDesc;
-    btDesc.baseWidthExp = 5;
-    btDesc.baseHeightExp = 5;
+    btDesc.baseWidthExp = 4;
+    btDesc.baseHeightExp = 4;
     btDesc.variationThreshold = 0.02f;
     std::string inFile = "";
     std::string outFile = "";
