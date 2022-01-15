@@ -11,9 +11,21 @@ namespace Blomp
     {
         float r, g, b;
     public:
-        Pixel() = default;
+        Pixel() : Pixel(0.0f) {}
+        Pixel(float c) : Pixel(c, c, c) {}
         Pixel(float r, float g, float b) : r(r), g(g), b(b) {}
+    public:
+        operator float() const;
     };
+
+    Pixel& operator+=(Pixel& left, const Pixel& right);
+    Pixel& operator-=(Pixel& left, const Pixel& right);
+    Pixel& operator*=(Pixel& left, const Pixel& right);
+    Pixel& operator/=(Pixel& left, const Pixel& right);
+    Pixel operator+(Pixel left, const Pixel& right);
+    Pixel operator-(Pixel left, const Pixel& right);
+    Pixel operator*(Pixel left, const Pixel& right);
+    Pixel operator/(Pixel left, const Pixel& right);
 
     class Image
     {

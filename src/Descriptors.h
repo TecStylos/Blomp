@@ -4,8 +4,8 @@ namespace Blomp
 {
     struct BlockTreeDesc
     {
-        int baseWidth, baseHeight;
-        float variation;
+        int baseWidthExp, baseHeightExp;
+        float variationThreshold;
     };
 
     struct ParentBlockDesc

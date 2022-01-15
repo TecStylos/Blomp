@@ -1,11 +1,57 @@
 #include "Image.h"
 
+#include <cmath>
 #include <stdexcept>
 
 #include "stb_image_write.h"
 
 namespace Blomp
 {
+    Pixel& operator+=(Pixel& left, const Pixel& right)
+    {
+        left.r += right.r;
+        left.g += right.g;
+        left.b += right.b;
+        return left;
+    }
+    Pixel& operator-=(Pixel& left, const Pixel& right)
+    {
+        left.r -= right.r;
+        left.g -= right.g;
+        left.b -= right.b;
+        return left;
+    }
+    Pixel& operator*=(Pixel& left, const Pixel& right)
+    {
+        left.r *= right.r;
+        left.g *= right.g;
+        left.b *= right.b;
+        return left;
+    }
+    Pixel& operator/=(Pixel& left, const Pixel& right)
+    {
+        left.r /= right.r;
+        left.g /= right.g;
+        left.b /= right.b;
+        return left;
+    }
+    Pixel operator+(Pixel left, const Pixel& right)
+    {
+        return left += right;
+    }
+    Pixel operator-(Pixel left, const Pixel& right)
+    {
+        return left -= right;
+    }
+    Pixel operator*(Pixel left, const Pixel& right)
+    {
+        return left *= right;
+    }
+    Pixel operator/(Pixel left, const Pixel& right)
+    {
+        return left /= right;
+    }
+
     enum class ImageType
     {
         UNKNOWN, PNG, BMP, TGA, JPG, HDR

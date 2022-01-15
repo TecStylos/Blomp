@@ -5,5 +5,12 @@
 
 namespace Blomp
 {
-    ParentBlockRef CreateBlockTree(const Image& img, const BlockTreeDesc& btDesc);
+    namespace BlockTree
+    {
+        ParentBlockRef fromImage(const Image& img, const BlockTreeDesc& btDesc);
+
+        ParentBlockRef fromFile(const std::string& filename);
+
+        void toFile(const std::string& filename);
+    }
 }

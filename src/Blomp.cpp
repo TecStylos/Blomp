@@ -1,30 +1,32 @@
 #include <iostream>
 
+#include "BlockTree.h"
+#include "Descriptors.h"
 #include "Image.h"
 
 int main(int argc, const char** argv, const char** env)
 {
-    std::cout << "Creating image structure..." << std::endl;
-    //Blomp::Image img(100, 100);
-    Blomp::Image img("image.png");
+    std::cout << "Loading the image..." << std::endl;
+    Blomp::Image img("stockImg.jpg");
 
-    std::cout << "W x H: " << img.width() << "x" << img.height() << std::endl;
+    std::cout << "Dimensions: " << img.width() << "x" << img.height() << std::endl;
 
-    std::cout << "Writing image data..." << std::endl;
-    for (int x = 0; x < img.width(); ++x)
-    {
-        for (int y = 0; y < img.height(); ++y)
-        {
-            auto& pix = img(x, y);
-            pix.r *= 0.5f;
-            pix.g *= 0.5f;
-            pix.b *= 0.5f;
-            //img(x, y) = Blomp::Pixel((float)x / 100.0f, (float)y / 100.0f, 0.3f);
-        }
-    }
+    Blomp::BlockTreeDesc btDesc;
+    btDesc.baseWidthExp = 7;
+    btDesc.baseHeightExp = 7;
+    btDesc.variationThreshold = 0.01f;
 
-    std::cout << "Storing the image to disk..." << std::endl;
-    img.save("image.png");
+    std::cout << "Creating blockTree from image..." << std::endl;
+    auto bt = Blomp::BlockTree::fromImage(img, btDesc);
+
+    std::cout << "Creating img2 structure..." << std::endl;
+    Blomp::Image img2(bt->getWidth(), bt->getHeight());
+
+    std::cout << "Converting blockTree to image..." << std::endl;
+    bt->writeToImg(img2);
+
+    std::cout << "Storing the img2 to disk..." << std::endl;
+    img2.save("image2.png");
 
     std::cout << "DONE!" << std::endl;
     return 0;
