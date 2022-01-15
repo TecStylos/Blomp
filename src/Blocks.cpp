@@ -40,6 +40,14 @@ namespace Blomp
                 img(x, y) = m_color;
     }
 
+    void ColorBlock::serialize(BitStream &bitStream) const
+    {
+        bitStream.writeBit(false);
+        uint8_t pixelData[3];
+        m_color.toCharArray(pixelData);
+        bitStream.write(pixelData, 3 * 8);
+    }
+
     ParentBlock::ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, const Image& img)
         : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
     {
@@ -52,15 +60,34 @@ namespace Blomp
                 m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, img));
     }
 
+    ParentBlock::ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream)
+        : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
+    {
+        int newDepth = pbDesc.depth + 1;
+        int blockWidth = calcDimVal(btDesc.baseWidthExp, newDepth);
+        int blockHeight = calcDimVal(btDesc.baseHeightExp, newDepth);
+
+        for (int y = m_y; y < (m_y + pbDesc.height) && y < imgHeight; y += blockHeight)
+            for (int x = m_x; x < (m_x + pbDesc.width) && x < imgWidth; x += blockWidth)
+                m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, imgWidth, imgHeight, bitStream));
+    }
+
     void ParentBlock::writeToImg(Image &img) const
     {
         for (auto& block : m_subBlocks)
             block->writeToImg(img);
     }
 
+    void ParentBlock::serialize(BitStream &bitStream) const
+    {
+        bitStream.writeBit(true);
+        for (auto& block : m_subBlocks)
+            block->serialize(bitStream);
+    }
+
     int ParentBlock::nBlocks() const
     {
-        int count = m_subBlocks.size();
+        int count = 1;
 
         for (auto block : m_subBlocks)
         {
@@ -105,6 +132,30 @@ namespace Blomp
         pbDesc.depth = newDepth;
 
         return BlockRef(new ParentBlock(pbDesc, btDesc, img));
+    }
+
+    BlockRef ParentBlock::createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream)
+    {
+        bool isParent = bitStream.readBit();
+
+        int blockWidth = std::min(imgWidth - x, calcDimVal(btDesc.baseWidthExp, newDepth));
+        int blockHeight = std::min(imgHeight - y, calcDimVal(btDesc.baseHeightExp, newDepth));
+
+        if (!isParent)
+        {
+            uint8_t pixelData[3];
+            bitStream.read(pixelData, 3 * 8);
+            return BlockRef(new ColorBlock(x, y, blockWidth, blockHeight, Pixel::fromCharArray(pixelData)));
+        }
+
+        ParentBlockDesc pbDesc;
+        pbDesc.x = x;
+        pbDesc.y = y;
+        pbDesc.width = blockWidth;
+        pbDesc.height = blockHeight;
+        pbDesc.depth = newDepth;
+
+        return BlockRef(new ParentBlock(pbDesc, btDesc, imgWidth, imgHeight, bitStream));
     }
 
     int ParentBlock::calcDimVal(int base, int depth)

@@ -7,6 +7,22 @@
 
 namespace Blomp
 {
+    void Pixel::toCharArray(uint8_t* pixelData) const
+    {
+        pixelData[0] = r * 255;
+        pixelData[1] = g * 255;
+        pixelData[2] = b * 255;
+    }
+
+    Pixel Pixel::fromCharArray(const uint8_t* pixelData)
+    {
+        Pixel pix;
+        pix.r = float(pixelData[0]) / 255;
+        pix.g = float(pixelData[1]) / 255;
+        pix.b = float(pixelData[2]) / 255;
+        return pix;
+    }
+
     Pixel& operator+=(Pixel& left, const Pixel& right)
     {
         left.r += right.r;
@@ -92,13 +108,7 @@ namespace Blomp
         m_buffer.reserve(m_width * m_height);
 
         for (int i = 0; i < m_width * m_height; ++i)
-        {
-            Pixel pix;
-            pix.r = float(data[i * nChannels + 0]) / 255;
-            pix.g = float(data[i * nChannels + 1]) / 255;
-            pix.b = float(data[i * nChannels + 2]) / 255;
-            m_buffer.push_back(pix);
-        }
+            m_buffer.push_back(Pixel::fromCharArray((const uint8_t*)data + i * nChannels));
 
         stbi_image_free(data);
     }

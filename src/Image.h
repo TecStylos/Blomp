@@ -16,6 +16,9 @@ namespace Blomp
         Pixel(float r, float g, float b) : r(r), g(g), b(b) {}
     public:
         operator float() const;
+    public:
+        void toCharArray(uint8_t* pixelData) const;
+        static Pixel fromCharArray(const uint8_t* pixelData);
     };
 
     Pixel& operator+=(Pixel& left, const Pixel& right);

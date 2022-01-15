@@ -11,14 +11,16 @@
 const char* helpText = 
 "Usage:\n"
 "  blomp [mode] [options] [inFile]\n"
+"\n"
 "Modes:\n"
 "  help         View this help.\n"
 "  enc          Image -> Blomp\n"
 "  dec          Blomp -> Image\n"
+"\n"
 "Options:\n"
-"  -w [int]     Base block width exponent. Default: 7\n"
-"  -h [int]     Base block height exponent. Default: 7\n"
-"  -v [float]   Variation threshold. Default: 0.025\n"
+"  -w [int]     Base block width exponent. Default: 5\n"
+"  -h [int]     Base block height exponent. Default: 5\n"
+"  -v [float]   Variation threshold. Default: 0.02\n"
 "  -o [string]  Output filename. Default: [inFile] with changed file extension.\n"
 "\n"
 "Supported image formats:\n"
@@ -29,6 +31,17 @@ const char* helpText =
 "";
 
 
+void viewBlockTreeInfo(Blomp::ParentBlockRef bt)
+{
+    int nBlocks = bt->nBlocks();
+    int nColorBlocks = bt->nColorBlocks();
+    int estFileSizeBits = sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + nBlocks + nColorBlocks * 3 * 8;
+    int estFileSizeBytes = (estFileSizeBits + 7) / 8;
+    std::cout << "  Blocks:      " << nBlocks << std::endl;
+    std::cout << "  ColorBlocks: " << nColorBlocks << std::endl;
+    std::cout << "  EstFileSize: " << estFileSizeBytes << " bytes" << std::endl;
+}
+
 //
 // TODO: ERROR CHECKING!!!
 //
@@ -37,9 +50,9 @@ int main(int argc, const char** argv, const char** env)
     Blomp::FileHeader fileHeader;
 
     Blomp::BlockTreeDesc btDesc;
-    btDesc.baseWidthExp = 7;
-    btDesc.baseHeightExp = 7;
-    btDesc.variationThreshold = 0.025f;
+    btDesc.baseWidthExp = 5;
+    btDesc.baseHeightExp = 5;
+    btDesc.variationThreshold = 0.02f;
     std::string inFile = "";
     std::string outFile = "";
 
@@ -170,6 +183,8 @@ int main(int argc, const char** argv, const char** env)
         std::cout << "Generating block tree..." << std::endl;
         auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
+        viewBlockTreeInfo(bt);
+
         std::cout << "Saving block tree..." << std::endl;
         Blomp::BitStream bitStream;
         Blomp::BlockTree::serialize(bt, bitStream);
@@ -189,8 +204,10 @@ int main(int argc, const char** argv, const char** env)
         std::ifstream ifStream(inFile, std::ios::binary | std::ios::in);
         ifStream.read((char*)&fileHeader, sizeof(fileHeader));
         Blomp::BitStream bitStream(ifStream);
-        Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
-        Blomp::ParentBlockRef bt;
+        ifStream.close();
+        auto bt = Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
+
+        viewBlockTreeInfo(bt);
 
         std::cout << "Generating image..." << std::endl;
         Blomp::Image img(bt->getWidth(), bt->getHeight());

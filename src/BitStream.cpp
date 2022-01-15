@@ -25,7 +25,7 @@ namespace Blomp
     {
         ++m_writeOffset;
 
-        if (m_readOffset > m_size)
+        if (m_writeOffset > m_size)
             resize(m_writeOffset);
 
         setBit(m_data.data(), m_writeOffset - 1, value);

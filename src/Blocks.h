@@ -55,6 +55,7 @@ namespace Blomp
     public:
         ParentBlock() = delete;
         ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, const Image& img);
+        ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream);
     public:
         virtual void writeToImg(Image& img) const override;
         virtual void serialize(BitStream& bitStream) const override;
@@ -63,10 +64,9 @@ namespace Blomp
         int nColorBlocks() const;
     protected:
         std::vector<BlockRef> m_subBlocks;
-    public:
-        static ParentBlockRef deserialize(BitStream& bitStream);
     protected:
         static BlockRef createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, const Image& img);
+        static BlockRef createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream);
         static int calcDimVal(int base, int depth);
         static BlockMetrics calcBlockMetrics(int x, int y, int baseWidthExp, int baseHeightExp, int newDepth, const Image& img);
     };
