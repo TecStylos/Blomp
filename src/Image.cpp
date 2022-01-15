@@ -172,7 +172,7 @@ namespace Blomp
         case ImageType::PNG: result = stbi_write_png(filename.c_str(), m_width, m_height, 3, data.data(), m_width * 3); break;
         case ImageType::BMP: result = stbi_write_bmp(filename.c_str(), m_width, m_height, 3, data.data()); break;
         case ImageType::TGA: result = stbi_write_tga(filename.c_str(), m_width, m_height, 3, data.data()); break;
-        case ImageType::JPG: result = stbi_write_jpg(filename.c_str(), m_width, m_height, 3, data.data(), 1); break;
+        case ImageType::JPG: result = stbi_write_jpg(filename.c_str(), m_width, m_height, 3, data.data(), 90); break;
         case ImageType::UNKNOWN: throw std::runtime_error("Unknown filetype!");
         }
     }
