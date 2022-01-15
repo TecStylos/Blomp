@@ -1,5 +1,7 @@
 #include "Image.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <stdexcept>
 
@@ -70,11 +72,15 @@ namespace Blomp
 
     enum class ImageType
     {
-        UNKNOWN, PNG, BMP, TGA, JPG, HDR
+        UNKNOWN, PNG, BMP, TGA, JPG
     };
 
-    ImageType ImgTypeFromFilename(const std::string& filename)
+    ImageType ImgTypeFromFilename(std::string filename)
     {
+        std::transform(filename.begin(), filename.end(), filename.begin(),
+            [](unsigned char c){ return std::tolower(c); }
+        );
+
         auto endswith = [&](const std::string sub) -> bool
         {
             return filename.find(sub) == filename.size() - sub.size();
@@ -84,7 +90,7 @@ namespace Blomp
         if (endswith(".bmp")) return ImageType::BMP;
         if (endswith(".tga")) return ImageType::TGA;
         if (endswith(".jpg")) return ImageType::JPG;
-        if (endswith(".hdr")) return ImageType::HDR;
+        if (endswith(".jpeg")) return ImageType::JPG;
 
         return ImageType::UNKNOWN;
     }
@@ -160,15 +166,13 @@ namespace Blomp
             data.push_back(stbi_uc(std::min(1.0f, std::max(0.0f, pix.b)) * 255.0f));
         }
 
-        // PNG, BMP, TGA, JPG, HDR
         int result;
         switch (type)
         {
         case ImageType::PNG: result = stbi_write_png(filename.c_str(), m_width, m_height, 3, data.data(), m_width * 3); break;
-        case ImageType::BMP: break;
-        case ImageType::TGA: break;
-        case ImageType::JPG: break;
-        case ImageType::HDR: break;
+        case ImageType::BMP: result = stbi_write_bmp(filename.c_str(), m_width, m_height, 3, data.data()); break;
+        case ImageType::TGA: result = stbi_write_tga(filename.c_str(), m_width, m_height, 3, data.data()); break;
+        case ImageType::JPG: result = stbi_write_jpg(filename.c_str(), m_width, m_height, 3, data.data(), 1); break;
         case ImageType::UNKNOWN: throw std::runtime_error("Unknown filetype!");
         }
     }

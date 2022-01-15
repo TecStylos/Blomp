@@ -26,7 +26,7 @@ const char* helpText =
 "Supported image formats:\n"
 "  Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM\n"
 "   enc    X   X   X   X   X   X   X   X   X \n"
-"   dec    X   X   X   X           X         \n"
+"   dec    X   X   X   X                     \n"
 "  For more details see https://github.com/nothings/stb \n"
 "";
 
@@ -221,29 +221,6 @@ int main(int argc, const char** argv, const char** env)
         std::cout << "Unknown mode selected.";
         return 1;
     }
-
-    // std::cout << "Loading image..." << std::endl;
-    // Blomp::Image img("nature.jpg");
-
-    // std::cout << "Dimensions: " << img.width() << "x" << img.height() << std::endl;
-
-    // std::cout << "Creating blockTree from image..." << std::endl;
-    // auto bt = Blomp::BlockTree::fromImage(img, btDesc);
-
-    // int nBlocks = bt->nBlocks();
-    // int nColorBlocks = bt->nColorBlocks();
-    // int estFileSizeBits = 4 * 4 * 8 + nBlocks + nColorBlocks * 3 * 8;
-    // std::cout << "  Blocks:      " << nBlocks << std::endl;
-    // std::cout << "  ColorBlocks: " << nColorBlocks << std::endl;
-    // std::cout << "  EstFileSize: " << estFileSizeBits << " bits" << std::endl;
-
-    // std::cout << "Converting blockTree to image..." << std::endl;
-    // Blomp::Image img2(bt->getWidth(), bt->getHeight());
-    // bt->writeToImg(img2);
-
-    // std::cout << "Storing img2 to disk..." << std::endl;
-    // img2.save("image2.png");
-
-    // std::cout << "DONE!" << std::endl;
+    
     return 0;
 }
