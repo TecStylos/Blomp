@@ -9,8 +9,8 @@ namespace Blomp
     {
         ParentBlockRef fromImage(const Image& img, const BlockTreeDesc& btDesc);
 
-        ParentBlockRef fromFile(const std::string& filename);
+        void serialize(ParentBlockRef pbRef, BitStream& bitStream);
 
-        void toFile(const std::string& filename);
+        ParentBlockRef deserialize(BaseDescriptor bd, BitStream& bitStream);
     }
 }

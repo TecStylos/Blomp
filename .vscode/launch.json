@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/bin/Debug/Blomp",
-            "args": [],
+            "args": [ "enc", "-w", "7", "-h", "7", "-v", "0.1", "-o", "compressed.blp", "nature.jpg" ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "buildDebugApplication"
         }

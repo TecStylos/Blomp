@@ -14,4 +14,10 @@ namespace Blomp
         int width, height;
         int depth;
     };
+
+    struct BaseDescriptor
+    {
+        int imgWidth, imgHeight;
+        int baseWidthExp, baseHeightExp;
+    };
 }

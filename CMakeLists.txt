@@ -16,12 +16,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 add_executable(
     Blomp
-    "src/Blomp.cpp"
-    "src/Image.cpp"
+    "src/BitStream.cpp"
     "src/Blocks.cpp"
     "src/BlockTree.cpp"
-    "vendor/stb_image/stb_image.cpp"
+    "src/Blomp.cpp"
+    "src/Image.cpp"
     "vendor/stb_image/stb_image_write.cpp"
+    "vendor/stb_image/stb_image.cpp"
 )
 
 target_include_directories(

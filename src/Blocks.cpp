@@ -58,6 +58,38 @@ namespace Blomp
             block->writeToImg(img);
     }
 
+    int ParentBlock::nBlocks() const
+    {
+        int count = m_subBlocks.size();
+
+        for (auto block : m_subBlocks)
+        {
+            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
+            if (pb)
+                count += pb->nBlocks();
+            else
+                ++count;
+        }
+
+        return count;
+    }
+
+    int ParentBlock::nColorBlocks() const
+    {
+        int count = 0;
+
+        for (auto block : m_subBlocks)
+        {
+            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
+            if (pb)
+                count += pb->nColorBlocks();
+            else
+                ++count;
+        }
+
+        return count;
+    }
+
     BlockRef ParentBlock::createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, const Image& img)
     {
         BlockMetrics bm = calcBlockMetrics(x, y, btDesc.baseWidthExp, btDesc.baseHeightExp, newDepth, img);

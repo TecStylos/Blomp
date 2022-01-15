@@ -15,5 +15,15 @@ namespace Blomp
 
             return std::shared_ptr<ParentBlock>(new ParentBlock(pbDesc, btDesc, img));
         }
+
+        void serialize(ParentBlockRef pbRef, BitStream& bitStream)
+        {
+            pbRef->serialize(bitStream);
+        }
+
+        ParentBlockRef deserialize(BitStream& bitStream)
+        {
+            return ParentBlock::deserialize(bitStream);
+        }
     }
 }
