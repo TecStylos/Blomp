@@ -352,7 +352,7 @@ int main(int argc, const char** argv, const char** env)
             std::cout << "Comp Results ('" << compFile << "' vs. '" << inFile << "'):" << std::endl;
             std::cout << "  Similarity: " << similarity << std::endl;
             std::cout << "  Data ratio: " << dataRatio << std::endl;
-            std::cout << "  Score:      " << ((similarity) * (1.0f - dataRatio)) << std::endl;
+            std::cout << "  Score:      " << (similarity / dataRatio) << std::endl;
         }
         else if (mode == "maxv")
         {
