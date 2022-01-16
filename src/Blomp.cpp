@@ -23,18 +23,19 @@ Modes:
   help         View this help.
   enc          Convert an image file to a blomp file.
   dec          Convert a blomp file to an image file.
+  denc         Shortcut for running 'enc' and 'dec'. Doesn't save the *.blp file.
   comp         Compare two images with the same dimensions.
-  maxv         Determine the maximum variation threshold for a blomp file not bigger than the input file.
+  maxv         Estimate the max. '-v' to generate a blomp file not bigger than the input file.
   info         View information of a blomp file.
 
 Options:
-  -d [int]     Block depth. Default: 4, Range: 0-10 (Used in mode 'enc')
-  -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0 (Used in mode 'enc')
-  -o [string]  Output filename. Default: [inFile] with changed file extension. (Used in modes 'enc' and 'dec')
-  -m [string]  Heatmap filename. Generate a compression heatmap if specified. (Used in modes 'enc' and 'dec')
-  -i [int]     Number of iterations for mode 'maxv'. Default: 4
-  -c [string]  Comparison file. (Used in mode 'comp')
-  -q           Quiet. View less information.
+  -d [int]     Block depth. Default: 4, Range: 0-10, Modes: enc/dec/maxv/denc
+  -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0, Modes: enc/denc
+  -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc
+  -m [string]  Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc
+  -i [int]     Number of iterations for mode 'maxv'. Default: 4, Modes: maxv
+  -c [string]  Comparison file. Modes: comp
+  -q           Quiet. View less information. Modes: [all]
 
 Supported image formats:
   Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM
@@ -270,7 +271,16 @@ int main(int argc, const char** argv, const char** env)
 
     if (outFile.empty())
     {
-        outFile = inFile.substr(0, inFile.find_last_of(".")) + (mode == "enc" ? ".blp" : ".png");
+        std::string fileext = "";
+        if (mode == "enc")
+            fileext = ".blp";
+        else if (mode == "dec")
+            fileext = ".png";
+        else if (mode == "denc")
+            fileext = "_DENC.png";
+        else
+            fileext = ".UNKNOWN";
+        outFile = inFile.substr(0, inFile.find_last_of(".")) + fileext;
     }
 
     try
@@ -295,8 +305,21 @@ int main(int argc, const char** argv, const char** env)
                 viewBlockTreeInfo(bt);
 
             Blomp::Image img(bt->getWidth(), bt->getHeight());
-            bt->writeToImg(img);
 
+            bt->writeToImg(img);
+            img.save(outFile);
+
+            autoGenSaveHeatmap(bt, img, heatmapFile);
+        }
+        else if (mode == "denc")
+        {
+            Blomp::Image img(inFile);
+            auto bt = Blomp::BlockTree::fromImage(img, btDesc);
+
+            if (!beQuiet)
+                viewBlockTreeInfo(bt);
+
+            bt->writeToImg(img);
             img.save(outFile);
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
