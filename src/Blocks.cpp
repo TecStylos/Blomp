@@ -1,7 +1,6 @@
 #include "Blocks.h"
 #include "Descriptors.h"
 #include <algorithm>
-#include <math.h>
 #include <stdexcept>
 
 namespace Blomp
@@ -9,26 +8,6 @@ namespace Blomp
     Block::Block(int x, int y, int w, int h)
         : m_x(x), m_y(y), m_w(w), m_h(h)
     {}
-
-    int Block::getX() const
-    {
-        return m_x;
-    }
-
-    int Block::getY() const
-    {
-        return m_y;
-    }
-
-    int Block::getWidth() const
-    {
-        return m_w;
-    }
-
-    int Block::getHeight() const
-    {
-        return m_h;
-    }
 
     ColorBlock::ColorBlock(int x, int y, int w, int h, Pixel color)
         : Block(x, y, w, h), m_color(color)
@@ -176,14 +155,6 @@ namespace Blomp
         pbDesc.depth = newDepth;
 
         return BlockRef(new ParentBlock(pbDesc, btDesc, imgWidth, imgHeight, bitStream));
-    }
-
-    int ParentBlock::calcDimVal(int base, int depth)
-    {
-        if (depth > base)
-            throw std::runtime_error("FATAL: depth > maxDepth!!!");
-
-        return std::pow(2, base - depth);
     }
 
     BlockMetrics ParentBlock::calcBlockMetrics(int x, int y, int maxDepth, int newDepth, const Image& img)

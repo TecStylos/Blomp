@@ -54,4 +54,81 @@ namespace Blomp
     {
         write(&src, sizeof(src) * 8);
     }
+
+    inline bool BitStream::readBit()
+    {
+        ++m_readOffset;
+
+        return getBit(m_data.data(), m_readOffset - 1);
+    }
+
+    inline void BitStream::writeBit(bool value)
+    {
+        ++m_writeOffset;
+
+        if (m_writeOffset > m_size)
+            resize(m_writeOffset);
+
+        setBit(m_data.data(), m_writeOffset - 1, value);
+    }
+
+    inline void BitStream::read(void* dest, uint64_t nBits, uint64_t destOffset)
+    {
+        for (uint64_t i = 0; i < nBits; ++i)
+            setBit((char*)dest, destOffset + i, readBit());
+    }
+
+    inline void BitStream::write(const void* src, uint64_t nBits, uint64_t srcOffset)
+    {
+        for (uint64_t i = 0; i < nBits; ++i)
+            writeBit(getBit((const char*)src, srcOffset + i));
+    }
+
+    inline uint64_t BitStream::size() const
+    {
+        return m_size;
+    }
+
+    inline void* BitStream::data()
+    {
+        return m_data.data();
+    }
+
+    inline const void* BitStream::data() const
+    {
+        return m_data.data();
+    }
+
+    inline bool BitStream::getBit(const char* data, uint64_t offset) const
+    {
+        if (offset >= m_size)
+            throw std::runtime_error("Unable to get out-of-bounds bit of bitstream.");
+
+        uint64_t byte;
+        uint64_t bit;
+        splitOffset(byte, bit, offset);
+        
+        return (data[byte] >> bit) & 1;
+    }
+
+    inline void BitStream::setBit(char* data, uint64_t offset, bool value)
+    {
+        if (offset >= m_size)
+            throw std::runtime_error("Unable to set out-of-bounds bit of bitstream.");
+
+        uint64_t byte;
+        uint64_t bit;
+        splitOffset(byte, bit, offset);
+
+        if (value)
+            data[byte] |= (1 << bit);
+        else
+            data[byte] &= ~(1 << bit);
+    }
+
+    inline void BitStream::splitOffset(uint64_t& byteOut, uint64_t& bitOut, uint64_t offsetIn)
+    {
+        byteOut = offsetIn / 8;
+        bitOut = offsetIn % 8;
+    }
 }

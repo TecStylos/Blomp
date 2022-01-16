@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 #include "stb_image.h"
 
@@ -49,4 +50,101 @@ namespace Blomp
         int m_height;
         std::vector<Pixel> m_buffer;
     };
+
+    inline void Pixel::toCharArray(uint8_t* pixelData) const
+    {
+        pixelData[0] = r * 255;
+        pixelData[1] = g * 255;
+        pixelData[2] = b * 255;
+    }
+
+    inline Pixel Pixel::fromCharArray(const uint8_t* pixelData)
+    {
+        Pixel pix;
+        pix.r = float(pixelData[0]) / 255;
+        pix.g = float(pixelData[1]) / 255;
+        pix.b = float(pixelData[2]) / 255;
+        return pix;
+    }
+
+    inline Pixel& operator+=(Pixel& left, const Pixel& right)
+    {
+        left.r += right.r;
+        left.g += right.g;
+        left.b += right.b;
+        return left;
+    }
+    inline Pixel& operator-=(Pixel& left, const Pixel& right)
+    {
+        left.r -= right.r;
+        left.g -= right.g;
+        left.b -= right.b;
+        return left;
+    }
+    inline Pixel& operator*=(Pixel& left, const Pixel& right)
+    {
+        left.r *= right.r;
+        left.g *= right.g;
+        left.b *= right.b;
+        return left;
+    }
+    inline Pixel& operator/=(Pixel& left, const Pixel& right)
+    {
+        left.r /= right.r;
+        left.g /= right.g;
+        left.b /= right.b;
+        return left;
+    }
+    inline Pixel operator+(Pixel left, const Pixel& right)
+    {
+        return left += right;
+    }
+    inline Pixel operator-(Pixel left, const Pixel& right)
+    {
+        return left -= right;
+    }
+    inline Pixel operator*(Pixel left, const Pixel& right)
+    {
+        return left *= right;
+    }
+    inline Pixel operator/(Pixel left, const Pixel& right)
+    {
+        return left /= right;
+    }
+
+    inline int Image::width() const
+    {
+        return m_width;
+    }
+
+    inline int Image::height() const
+    {
+        return m_height;
+    }
+
+    inline Pixel& Image::get(int x, int y)
+    {
+        uint64_t offset = y * width() + x;
+        if (offset >= m_buffer.size())
+            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
+        return m_buffer[offset];
+    }
+
+    inline const Pixel& Image::get(int x, int y) const
+    {
+        uint64_t offset = y * width() + x;
+        if (offset >= m_buffer.size())
+            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
+        return m_buffer[offset];
+    }
+
+    inline Pixel& Image::operator()(int x, int y)
+    {
+        return get(x, y);
+    }
+
+    inline const Pixel& Image::operator()(int x, int y) const
+    {
+        return get(x, y);
+    }
 }

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <math.h>
 
 #include "Image.h"
 #include "BitStream.h"
@@ -22,8 +23,6 @@ namespace Blomp
         Block() = delete;
         Block(int x, int y, int w, int h);
     public:
-        int getX() const;
-        int getY() const;
         int getWidth() const;
         int getHeight() const;
     public:
@@ -73,4 +72,22 @@ namespace Blomp
         static int calcDimVal(int base, int depth);
         static BlockMetrics calcBlockMetrics(int x, int y, int maxDepth, int newDepth, const Image& img);
     };
+
+    inline int Block::getWidth() const
+    {
+        return m_w;
+    }
+
+    inline int Block::getHeight() const
+    {
+        return m_h;
+    }
+
+    inline int ParentBlock::calcDimVal(int base, int depth)
+    {
+        if (depth > base)
+            throw std::runtime_error("FATAL: depth > maxDepth!!!");
+
+        return std::pow(2, base - depth);
+    }
 }
