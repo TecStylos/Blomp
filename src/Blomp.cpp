@@ -31,8 +31,8 @@ Modes:
 Options:
   -d [int]     Block depth. Default: 4, Range: 0-10, Modes: enc/dec/maxv/denc
   -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0, Modes: enc/denc
-  -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc
-  -m [string]  Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc
+  -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc/maxv
+  -m [string]  Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc/maxv
   -i [int]     Number of iterations for mode 'maxv'. Default: 10, Modes: maxv
   -c [string]  Comparison file. Modes: comp
   -q           Quiet. View less information. Modes: [all]
@@ -50,8 +50,10 @@ uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
     return (sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + bt->nBlocks() + bt->nColorBlocks() * 3 * 8 + 7) / 8;
 }
 
-void viewBlockTreeInfo(Blomp::ParentBlockRef bt)
+void viewBlockTreeInfo(Blomp::ParentBlockRef bt, const std::string& filename = "")
 {
+    if (!filename.empty())
+        std::cout << "BlockTree Info for '" << filename << "':" << std::endl;
     std::cout << "  Blocks:      " << bt->nBlocks() << std::endl;
     std::cout << "  ColorBlocks: " << bt->nColorBlocks() << std::endl;
     std::cout << "  EstFileSize: " << calcEstFileSize(bt) << " bytes" << std::endl;
@@ -269,7 +271,8 @@ int main(int argc, const char** argv, const char** env)
         return 1;
     }
 
-    if (outFile.empty())
+
+    while (outFile.empty())
     {
         std::string fileext = "";
         if (mode == "enc")
@@ -278,9 +281,12 @@ int main(int argc, const char** argv, const char** env)
             fileext = ".png";
         else if (mode == "denc")
             fileext = "_DENC.png";
+        else if (mode == "maxv")
+            break;
         else
             fileext = ".UNKNOWN";
         outFile = inFile.substr(0, inFile.find_last_of(".")) + fileext;
+        break;
     }
 
     try
@@ -291,7 +297,7 @@ int main(int argc, const char** argv, const char** env)
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
             if (!beQuiet)
-                viewBlockTreeInfo(bt);
+                viewBlockTreeInfo(bt, outFile);
 
             saveBlockTree(bt, btDesc.maxDepth, outFile);
 
@@ -302,7 +308,7 @@ int main(int argc, const char** argv, const char** env)
             auto bt = loadBlockTree(inFile);
 
             if (!beQuiet)
-                viewBlockTreeInfo(bt);
+                viewBlockTreeInfo(bt, inFile);
 
             Blomp::Image img(bt->getWidth(), bt->getHeight());
 
@@ -317,7 +323,7 @@ int main(int argc, const char** argv, const char** env)
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
             if (!beQuiet)
-                viewBlockTreeInfo(bt);
+                viewBlockTreeInfo(bt, "%TEMP%");
 
             bt->writeToImg(img);
             img.save(outFile);
@@ -337,7 +343,7 @@ int main(int argc, const char** argv, const char** env)
             int64_t sizeIn = std::filesystem::file_size(files[1]);
             float dataRatio = float(sizeIn) / sizeComp;
 
-            std::cout << "Results:" << std::endl;
+            std::cout << "Comp Results ('" << compFile << "' vs. '" << inFile << "'):" << std::endl;
             std::cout << "  Similarity: " << similarity << std::endl;
             std::cout << "  Data ratio: " << dataRatio << std::endl;
             std::cout << "  Score:      " << ((similarity) * (1.0f - dataRatio)) << std::endl;
@@ -373,15 +379,22 @@ int main(int argc, const char** argv, const char** env)
                     std::cout << "v:" << btDesc.variationThreshold << " fs:" << sizeComp << " bytes" << std::endl;
             }
 
-            std::cout << "Result:" << std::endl;
+            std::cout << "MaxV result for '" << inFile << "':" << std::endl;
             std::cout << "  v:" << btDesc.variationThreshold << " -> fs: " << sizeComp << " bytes" << std::endl;
+
+            if (!outFile.empty())
+            {
+                bt->writeToImg(img);
+                img.save(outFile);
+            }
+
+            autoGenSaveHeatmap(bt, img, heatmapFile);
         }
         else if (mode == "info")
         {
             auto bt = loadBlockTree(inFile);
 
-            std::cout << "Info for '" << inFile << "':" << std::endl;
-            viewBlockTreeInfo(bt);
+            viewBlockTreeInfo(bt, inFile);
         }
         else
         {
