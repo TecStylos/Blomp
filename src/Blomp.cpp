@@ -18,10 +18,10 @@ const char* helpText =
 "  dec          Blomp -> Image\n"
 "\n"
 "Options:\n"
-"  -w [int]     Base block width exponent. Default: 4\n"
-"  -h [int]     Base block height exponent. Default: 4\n"
+"  -d [int]     Block depth. Default: 4\n"
 "  -v [float]   Variation threshold. Default: 0.02\n"
 "  -o [string]  Output filename. Default: [inFile] with changed file extension.\n"
+"  -m [string]  Heatmap filename. Generate a compression heatmap if specified.\n"
 "\n"
 "Supported image formats:\n"
 "  Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM\n"
@@ -42,6 +42,19 @@ void viewBlockTreeInfo(Blomp::ParentBlockRef bt)
     std::cout << "  EstFileSize: " << estFileSizeBytes << " bytes" << std::endl;
 }
 
+void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
+{
+    if (heatmapFile.empty())
+        return;
+
+    std::cout << "Generating heatmap..." << std::endl;
+    bt->writeHeatmap(img, 10);
+
+    std::cout << "Saving heatmap..." << std::endl;
+    img.save(heatmapFile);
+
+}
+
 //
 // TODO: ERROR CHECKING!!!
 //
@@ -50,11 +63,11 @@ int main(int argc, const char** argv, const char** env)
     Blomp::FileHeader fileHeader;
 
     Blomp::BlockTreeDesc btDesc;
-    btDesc.baseWidthExp = 4;
-    btDesc.baseHeightExp = 4;
+    btDesc.maxDepth = 4;
     btDesc.variationThreshold = 0.02f;
     std::string inFile = "";
     std::string outFile = "";
+    std::string heatmapFile = "";
 
     if (argc < 2)
     {
@@ -82,39 +95,19 @@ int main(int argc, const char** argv, const char** env)
         std::string arg = argv[i];
         bool invalidValue = false;
 
-        if (arg == "-w")
+        if (arg == "-d")
         {
             ++i;
             if (i >= argc)
             {
-                std::cout << "Missing value after option '-w'." << std::endl;
+                std::cout << "Missing value after option '-d'." << std::endl;
                 return 1;
             }
             try 
             {
-                btDesc.baseWidthExp = std::stoi(argv[i]);
+                btDesc.maxDepth = std::stoi(argv[i]);
 
-                if (btDesc.baseWidthExp < 0 || 10 < btDesc.baseWidthExp)
-                    invalidValue = true;
-            }
-            catch (std::exception e)
-            {
-                invalidValue = true;
-            }
-        }
-        else if (arg == "-h")
-        {
-            ++i;
-            if (i >= argc)
-            {
-                std::cout << "Missing value after option '-h'." << std::endl;
-                return 1;
-            }
-            try 
-            {
-                btDesc.baseHeightExp = std::stoi(argv[i]);
-
-                if (btDesc.baseHeightExp < 0 || 10 < btDesc.baseHeightExp)
+                if (btDesc.maxDepth < 0 || 10 < btDesc.maxDepth)
                     invalidValue = true;
             }
             catch (std::exception e)
@@ -153,6 +146,17 @@ int main(int argc, const char** argv, const char** env)
 
             outFile = argv[i];
         }
+        else if (arg == "-m")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                std::cout << "Missing value after option '-o'." << std::endl;
+                return 1;
+            }
+
+            heatmapFile = argv[i];
+        }
         else
         {
             inFile = arg;
@@ -190,13 +194,14 @@ int main(int argc, const char** argv, const char** env)
         Blomp::BlockTree::serialize(bt, bitStream);
         fileHeader.bd.imgWidth = img.width();
         fileHeader.bd.imgHeight = img.height();
-        fileHeader.bd.baseWidthExp = btDesc.baseWidthExp;
-        fileHeader.bd.baseHeightExp = btDesc.baseHeightExp;
+        fileHeader.bd.maxDepth = btDesc.maxDepth;
 
         std::ofstream ofStream(outFile, std::ios::binary | std::ios::out | std::ios::trunc);
         ofStream.write((const char*)&fileHeader, sizeof(fileHeader));
         ofStream << bitStream;
         ofStream.close();
+
+        autoGenSaveHeatmap(bt, img, heatmapFile);
     }
     else if (mode == "dec")
     {
@@ -215,6 +220,8 @@ int main(int argc, const char** argv, const char** env)
 
         std::cout << "Saving image..." << std::endl;
         img.save(outFile);
+
+        autoGenSaveHeatmap(bt, img, heatmapFile);
     }
     else
     {

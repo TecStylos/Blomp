@@ -4,7 +4,7 @@ namespace Blomp
 {
     struct BlockTreeDesc
     {
-        int baseWidthExp, baseHeightExp;
+        int maxDepth;
         float variationThreshold;
     };
 
@@ -18,6 +18,6 @@ namespace Blomp
     struct BaseDescriptor
     {
         int imgWidth, imgHeight;
-        int baseWidthExp, baseHeightExp;
+        int maxDepth;
     };
 }

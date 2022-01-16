@@ -32,8 +32,7 @@ namespace Blomp
             pbDesc.depth = -1;
             
             BlockTreeDesc btDesc;
-            btDesc.baseWidthExp = bd.baseWidthExp;
-            btDesc.baseHeightExp = bd.baseHeightExp;
+            btDesc.maxDepth = bd.maxDepth;
             btDesc.variationThreshold = 0.0f;
 
             bitStream.readBit();

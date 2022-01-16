@@ -40,6 +40,14 @@ namespace Blomp
                 img(x, y) = m_color;
     }
 
+    void ColorBlock::writeHeatmap(Image &img, int maxDepth, int depth) const
+    {
+        Pixel color = 1.0f / maxDepth * depth;
+        for (int x = m_x; x < m_x + m_w; ++x)
+            for (int y = m_y; y < m_y + m_h; ++y)
+                img(x, y) = color;
+    }
+
     void ColorBlock::serialize(BitStream &bitStream) const
     {
         bitStream.writeBit(false);
@@ -52,11 +60,10 @@ namespace Blomp
         : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
     {
         int newDepth = pbDesc.depth + 1;
-        int blockWidth = calcDimVal(btDesc.baseWidthExp, newDepth);
-        int blockHeight = calcDimVal(btDesc.baseHeightExp, newDepth);
+        int blockDim = calcDimVal(btDesc.maxDepth, newDepth);
 
-        for (int y = m_y; y < (m_y + pbDesc.height) && y < img.height(); y += blockHeight)
-            for (int x = m_x; x < (m_x + pbDesc.width) && x < img.width(); x += blockWidth)
+        for (int y = m_y; y < (m_y + pbDesc.height) && y < img.height(); y += blockDim)
+            for (int x = m_x; x < (m_x + pbDesc.width) && x < img.width(); x += blockDim)
                 m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, img));
     }
 
@@ -64,11 +71,10 @@ namespace Blomp
         : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
     {
         int newDepth = pbDesc.depth + 1;
-        int blockWidth = calcDimVal(btDesc.baseWidthExp, newDepth);
-        int blockHeight = calcDimVal(btDesc.baseHeightExp, newDepth);
+        int blockDim = calcDimVal(btDesc.maxDepth, newDepth);
 
-        for (int y = m_y; y < (m_y + pbDesc.height) && y < imgHeight; y += blockHeight)
-            for (int x = m_x; x < (m_x + pbDesc.width) && x < imgWidth; x += blockWidth)
+        for (int y = m_y; y < (m_y + pbDesc.height) && y < imgHeight; y += blockDim)
+            for (int x = m_x; x < (m_x + pbDesc.width) && x < imgWidth; x += blockDim)
                 m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, imgWidth, imgHeight, bitStream));
     }
 
@@ -76,6 +82,12 @@ namespace Blomp
     {
         for (auto& block : m_subBlocks)
             block->writeToImg(img);
+    }
+
+    void ParentBlock::writeHeatmap(Image &img, int maxDepth, int depth) const
+    {
+        for (auto& block : m_subBlocks)
+            block->writeHeatmap(img, maxDepth, depth + 1);
     }
 
     void ParentBlock::serialize(BitStream &bitStream) const
@@ -119,7 +131,7 @@ namespace Blomp
 
     BlockRef ParentBlock::createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, const Image& img)
     {
-        BlockMetrics bm = calcBlockMetrics(x, y, btDesc.baseWidthExp, btDesc.baseHeightExp, newDepth, img);
+        BlockMetrics bm = calcBlockMetrics(x, y, btDesc.maxDepth, newDepth, img);
 
         if (bm.variation <= btDesc.variationThreshold)
             return BlockRef(new ColorBlock(x, y, bm.width, bm.height, bm.avgColor));
@@ -138,8 +150,9 @@ namespace Blomp
     {
         bool isParent = bitStream.readBit();
 
-        int blockWidth = std::min(imgWidth - x, calcDimVal(btDesc.baseWidthExp, newDepth));
-        int blockHeight = std::min(imgHeight - y, calcDimVal(btDesc.baseHeightExp, newDepth));
+        int maxDim = calcDimVal(btDesc.maxDepth, newDepth);
+        int blockWidth = std::min(imgWidth - x, maxDim);
+        int blockHeight = std::min(imgHeight - y, maxDim);
 
         if (!isParent)
         {
@@ -163,12 +176,14 @@ namespace Blomp
         return std::pow(2, base - depth);
     }
 
-    BlockMetrics ParentBlock::calcBlockMetrics(int x, int y, int baseWidthExp, int baseHeightExp, int newDepth, const Image& img)
+    BlockMetrics ParentBlock::calcBlockMetrics(int x, int y, int maxDepth, int newDepth, const Image& img)
     {
         BlockMetrics bm;
 
-        bm.width = std::min(img.width() - x, calcDimVal(baseWidthExp, newDepth));
-        bm.height = std::min(img.height() - y, calcDimVal(baseHeightExp, newDepth));
+        int maxDim = calcDimVal(maxDepth, newDepth);
+
+        bm.width = std::min(img.width() - x, maxDim);
+        bm.height = std::min(img.height() - y, maxDim);
 
         for (int rx = x; rx < x + bm.width; ++rx)
             for (int ry = y; ry < y + bm.height; ++ry)

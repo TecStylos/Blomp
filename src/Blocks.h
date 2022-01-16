@@ -28,6 +28,7 @@ namespace Blomp
         int getHeight() const;
     public:
         virtual void writeToImg(Image& img) const = 0;
+        virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const = 0;
         virtual void serialize(BitStream& bitStream) const = 0;
     protected:
         int m_x, m_y;
@@ -42,6 +43,7 @@ namespace Blomp
         ColorBlock(int x, int y, int w, int h, Pixel color);
     public:
         virtual void writeToImg(Image& img) const override;
+        virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const override;
         virtual void serialize(BitStream& bitStream) const override;
     protected:
         Pixel m_color;
@@ -58,6 +60,7 @@ namespace Blomp
         ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream);
     public:
         virtual void writeToImg(Image& img) const override;
+        virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const override;
         virtual void serialize(BitStream& bitStream) const override;
     public:
         int nBlocks() const;
@@ -68,6 +71,6 @@ namespace Blomp
         static BlockRef createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, const Image& img);
         static BlockRef createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream);
         static int calcDimVal(int base, int depth);
-        static BlockMetrics calcBlockMetrics(int x, int y, int baseWidthExp, int baseHeightExp, int newDepth, const Image& img);
+        static BlockMetrics calcBlockMetrics(int x, int y, int maxDepth, int newDepth, const Image& img);
     };
 }
