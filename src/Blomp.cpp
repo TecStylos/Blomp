@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -5,6 +6,7 @@
 #include <string>
 #include <filesystem>
 
+#include "Blocks.h"
 #include "Tools.h"
 #include "BitStream.h"
 #include "BlockTree.h"
@@ -22,13 +24,17 @@ Modes:
   enc          Convert an image file to a blomp file.
   dec          Convert a blomp file to an image file.
   comp         Compare two images with the same dimensions.
+  maxv         Determine the maximum variation threshold for a blomp file not bigger than the input file.
+  info         View information of a blomp file.
 
 Options:
   -d [int]     Block depth. Default: 4, Range: 0-10 (Used in mode 'enc')
   -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0 (Used in mode 'enc')
   -o [string]  Output filename. Default: [inFile] with changed file extension. (Used in modes 'enc' and 'dec')
   -m [string]  Heatmap filename. Generate a compression heatmap if specified. (Used in modes 'enc' and 'dec')
+  -i [int]     Number of iterations for mode 'maxv'. Default: 4
   -c [string]  Comparison file. (Used in mode 'comp')
+  -q           Quiet. View less information.
 
 Supported image formats:
   Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM
@@ -38,15 +44,16 @@ Supported image formats:
   For more details see https://github.com/nothings/stb 
 )";
 
+uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
+{
+    return (sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + bt->nBlocks() + bt->nColorBlocks() * 3 * 8 + 7) / 8;
+}
+
 void viewBlockTreeInfo(Blomp::ParentBlockRef bt)
 {
-    int nBlocks = bt->nBlocks();
-    int nColorBlocks = bt->nColorBlocks();
-    int estFileSizeBits = sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + nBlocks + nColorBlocks * 3 * 8;
-    int estFileSizeBytes = (estFileSizeBits + 7) / 8;
-    std::cout << "  Blocks:      " << nBlocks << std::endl;
-    std::cout << "  ColorBlocks: " << nColorBlocks << std::endl;
-    std::cout << "  EstFileSize: " << estFileSizeBytes << " bytes" << std::endl;
+    std::cout << "  Blocks:      " << bt->nBlocks() << std::endl;
+    std::cout << "  ColorBlocks: " << bt->nColorBlocks() << std::endl;
+    std::cout << "  EstFileSize: " << calcEstFileSize(bt) << " bytes" << std::endl;
 }
 
 void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
@@ -54,17 +61,68 @@ void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::
     if (heatmapFile.empty())
         return;
 
-    std::cout << "Generating heatmap..." << std::endl;
     bt->writeHeatmap(img, 10);
 
-    std::cout << "Saving heatmap..." << std::endl;
     img.save(heatmapFile);
+}
+
+Blomp::ParentBlockRef loadBlockTree(const std::string& filename)
+{
+    Blomp::FileHeader fileHeader;
+
+    std::ifstream ifStream(filename, std::ios::binary | std::ios::in);
+    if (!ifStream.is_open())
+        throw std::runtime_error("Unable to open blomp file.");
+
+    ifStream.read((char*)&fileHeader, sizeof(fileHeader));
+    if (!fileHeader.isValid())
+        throw std::runtime_error("Invalid blomp file header.");
+
+    Blomp::BitStream bitStream(ifStream);
+    ifStream.close();
+
+    return Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
+}
+
+void saveBlockTree(const Blomp::ParentBlockRef bt, int maxDepth, const std::string& filename)
+{
+    Blomp::FileHeader fileHeader;
+
+    Blomp::BitStream bitStream;
+    Blomp::BlockTree::serialize(bt, bitStream);
+    fileHeader.bd.imgWidth = bt->getWidth();
+    fileHeader.bd.imgHeight = bt->getHeight();
+    fileHeader.bd.maxDepth = maxDepth;
+
+    std::ofstream ofStream(filename, std::ios::binary | std::ios::out | std::ios::trunc);
+    if (!ofStream.is_open())
+        throw std::runtime_error("Unable to open blomp file.");
+
+    ofStream.write((const char*)&fileHeader, sizeof(fileHeader));
+    ofStream << bitStream;
+    ofStream.close();
+}
+
+Blomp::Image loadImage(const std::string& filename)
+{
+    Blomp::Image img(1, 1);
+    if (Blomp::endswith(filename, ".blp"))
+    {
+        auto bt = loadBlockTree(filename);
+
+        img = Blomp::Image(bt->getWidth(), bt->getHeight());
+        bt->writeToImg(img);
+    }
+    else
+    {
+        img = Blomp::Image(filename);
+    }
+
+    return img;
 }
 
 int main(int argc, const char** argv, const char** env)
 {
-    Blomp::FileHeader fileHeader;
-
     Blomp::BlockTreeDesc btDesc;
     btDesc.maxDepth = 4;
     btDesc.variationThreshold = 0.02f;
@@ -72,6 +130,8 @@ int main(int argc, const char** argv, const char** env)
     std::string outFile = "";
     std::string heatmapFile = "";
     std::string compFile = "";
+    int maxvIterations = 4;
+    bool beQuiet = false;
 
     if (argc < 2)
     {
@@ -155,6 +215,26 @@ int main(int argc, const char** argv, const char** env)
 
             heatmapFile = argv[i];
         }
+        else if (arg == "-i")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                std::cout << "Missing value after option '-i'." << std::endl;
+                return 1;
+            }
+            try 
+            {
+                maxvIterations = std::stof(argv[i]);
+
+                if (maxvIterations < 1)
+                    invalidValue = true;
+            }
+            catch (std::exception e)
+            {
+                invalidValue = true;
+            }
+        }
         else if (arg == "-c")
         {
             ++i;
@@ -165,6 +245,10 @@ int main(int argc, const char** argv, const char** env)
             }
 
             compFile = argv[i];
+        }
+        else if (arg == "-q")
+        {
+            beQuiet = true;
         }
         else
         {
@@ -193,52 +277,26 @@ int main(int argc, const char** argv, const char** env)
     {
         if (mode == "enc")
         {
-            std::cout << "Loading source image..." << std::endl;
             Blomp::Image img(inFile);
-            std::cout << "Generating block tree..." << std::endl;
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
-            viewBlockTreeInfo(bt);
+            if (!beQuiet)
+                viewBlockTreeInfo(bt);
 
-            std::cout << "Saving block tree..." << std::endl;
-            Blomp::BitStream bitStream;
-            Blomp::BlockTree::serialize(bt, bitStream);
-            fileHeader.bd.imgWidth = img.width();
-            fileHeader.bd.imgHeight = img.height();
-            fileHeader.bd.maxDepth = btDesc.maxDepth;
-
-            std::ofstream ofStream(outFile, std::ios::binary | std::ios::out | std::ios::trunc);
-            if (!ofStream.is_open())
-                throw std::runtime_error("Unable to open blomp file.");
-
-            ofStream.write((const char*)&fileHeader, sizeof(fileHeader));
-            ofStream << bitStream;
-            ofStream.close();
+            saveBlockTree(bt, btDesc.maxDepth, outFile);
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
         }
         else if (mode == "dec")
         {
-            std::cout << "Loading block tree data..." << std::endl;
-            std::ifstream ifStream(inFile, std::ios::binary | std::ios::in);
-            if (!ifStream.is_open())
-                throw std::runtime_error("Unable to open blomp file.");
+            auto bt = loadBlockTree(inFile);
 
-            ifStream.read((char*)&fileHeader, sizeof(fileHeader));
-            if (!fileHeader.isValid())
-                throw std::runtime_error("Invalid blomp file header.");
+            if (!beQuiet)
+                viewBlockTreeInfo(bt);
 
-            Blomp::BitStream bitStream(ifStream);
-            ifStream.close();
-            auto bt = Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
-
-            viewBlockTreeInfo(bt);
-
-            std::cout << "Generating image..." << std::endl;
             Blomp::Image img(bt->getWidth(), bt->getHeight());
             bt->writeToImg(img);
 
-            std::cout << "Saving image..." << std::endl;
             img.save(outFile);
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
@@ -248,34 +306,8 @@ int main(int argc, const char** argv, const char** env)
             std::vector<Blomp::Image> images;
             std::vector<std::string> files = { compFile, inFile };
             for (auto& filename : files)
-            {
-                images.push_back(Blomp::Image(1, 1));
-                if (Blomp::endswith(filename, ".blp"))
-                {
-                    std::cout << "Loading block tree..." << std::endl;
-                    std::ifstream ifStream(filename, std::ios::binary | std::ios::in);
-                    if (!ifStream.is_open())
-                        throw std::runtime_error("Unable to open blomp file.");
+                images.push_back(loadImage(filename));
 
-                    ifStream.read((char*)&fileHeader, sizeof(fileHeader));
-                    if (!fileHeader.isValid())
-                        throw std::runtime_error("Invalid blomp file header.");
-
-                    Blomp::BitStream bitStream(ifStream);
-                    ifStream.close();
-                    auto bt = Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
-
-                    images.back() = Blomp::Image(bt->getWidth(), bt->getHeight());
-                    bt->writeToImg(images.back());
-                }
-                else
-                {
-                    std::cout << "Loading image..." << std::endl;
-                    images.back() = Blomp::Image(filename);
-                }
-            }
-
-            std::cout << "Comparing images..." << std::endl;
             float similarity = Blomp::compareImages(images[0], images[1]);
 
             int64_t sizeComp = std::filesystem::file_size(files[0]);
@@ -286,6 +318,47 @@ int main(int argc, const char** argv, const char** env)
             std::cout << "  Similarity: " << similarity << std::endl;
             std::cout << "  Data ratio: " << dataRatio << std::endl;
             std::cout << "  Score:      " << ((similarity) * (1.0f - dataRatio)) << std::endl;
+        }
+        else if (mode == "maxv")
+        {
+            btDesc.variationThreshold = 1.0f;
+            float thresChange = 1.0f;
+
+            auto img = loadImage(inFile);
+            int64_t sizeOrig = std::filesystem::file_size(inFile);
+            int64_t sizeComp = 0;
+
+            Blomp::ParentBlockRef bt;
+
+            for (int i = 0; i < maxvIterations; ++i)
+            {
+                if (!beQuiet)
+                    std::cout << "Iteration " << (i + 1) << "/" << maxvIterations << "  ->  ";
+
+                thresChange /= 2.0f;
+
+                if (sizeComp < sizeOrig)
+                    btDesc.variationThreshold -= thresChange;
+                else
+                    btDesc.variationThreshold += thresChange;
+
+                bt = Blomp::BlockTree::fromImage(img, btDesc);
+
+                sizeComp = calcEstFileSize(bt);
+
+                if (!beQuiet)
+                    std::cout << "v:" << btDesc.variationThreshold << " fs:" << sizeComp << " bytes" << std::endl;
+            }
+
+            std::cout << "Result:" << std::endl;
+            std::cout << "  v:" << btDesc.variationThreshold << " -> fs: " << sizeComp << " bytes" << std::endl;
+        }
+        else if (mode == "info")
+        {
+            auto bt = loadBlockTree(inFile);
+
+            std::cout << "Info for '" << inFile << "':" << std::endl;
+            viewBlockTreeInfo(bt);
         }
         else
         {
