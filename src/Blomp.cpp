@@ -33,7 +33,7 @@ Options:
   -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0, Modes: enc/denc
   -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc
   -m [string]  Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc
-  -i [int]     Number of iterations for mode 'maxv'. Default: 4, Modes: maxv
+  -i [int]     Number of iterations for mode 'maxv'. Default: 10, Modes: maxv
   -c [string]  Comparison file. Modes: comp
   -q           Quiet. View less information. Modes: [all]
 
@@ -131,7 +131,7 @@ int main(int argc, const char** argv, const char** env)
     std::string outFile = "";
     std::string heatmapFile = "";
     std::string compFile = "";
-    int maxvIterations = 4;
+    int maxvIterations = 10;
     bool beQuiet = false;
 
     if (argc < 2)
@@ -344,8 +344,8 @@ int main(int argc, const char** argv, const char** env)
         }
         else if (mode == "maxv")
         {
-            btDesc.variationThreshold = 1.0f;
-            float thresChange = 1.0f;
+            btDesc.variationThreshold = 2.0f;
+            float thresChange = 2.0f;
 
             auto img = loadImage(inFile);
             int64_t sizeOrig = std::filesystem::file_size(inFile);
