@@ -1,12 +1,15 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <filesystem>
 
+#include "Tools.h"
 #include "BitStream.h"
 #include "BlockTree.h"
 #include "Descriptors.h"
 #include "Image.h"
 #include "FileHeader.h"
+#include "ImgCompare.h"
 
 const char* helpText = 
 "Usage:\n"
@@ -16,12 +19,14 @@ const char* helpText =
 "  help         View this help.\n"
 "  enc          Image -> Blomp\n"
 "  dec          Blomp -> Image\n"
+"  comp         Compare two images with the same dimensions.\n"
 "\n"
 "Options:\n"
 "  -d [int]     Block depth. Default: 4\n"
 "  -v [float]   Variation threshold. Default: 0.02\n"
 "  -o [string]  Output filename. Default: [inFile] with changed file extension.\n"
 "  -m [string]  Heatmap filename. Generate a compression heatmap if specified.\n"
+"  -c [string]  File to compare [inFile] with."
 "\n"
 "Supported image formats:\n"
 "  Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM\n"
@@ -52,7 +57,6 @@ void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::
 
     std::cout << "Saving heatmap..." << std::endl;
     img.save(heatmapFile);
-
 }
 
 //
@@ -68,6 +72,7 @@ int main(int argc, const char** argv, const char** env)
     std::string inFile = "";
     std::string outFile = "";
     std::string heatmapFile = "";
+    std::string compFile = "";
 
     if (argc < 2)
     {
@@ -81,12 +86,6 @@ int main(int argc, const char** argv, const char** env)
     if (mode == "help")
     {
         std::cout << helpText;
-        return 1;
-    }
-
-    if (mode != "enc" && mode != "dec")
-    {
-        std::cout << "Unknown mode selected." << std::endl;
         return 1;
     }
 
@@ -151,11 +150,22 @@ int main(int argc, const char** argv, const char** env)
             ++i;
             if (i >= argc)
             {
-                std::cout << "Missing value after option '-o'." << std::endl;
+                std::cout << "Missing value after option '-m'." << std::endl;
                 return 1;
             }
 
             heatmapFile = argv[i];
+        }
+        else if (arg == "-c")
+        {
+            ++i;
+            if (i >= argc)
+            {
+                std::cout << "Missing value after option '-c'." << std::endl;
+                return 1;
+            }
+
+            compFile = argv[i];
         }
         else
         {
@@ -222,6 +232,44 @@ int main(int argc, const char** argv, const char** env)
         img.save(outFile);
 
         autoGenSaveHeatmap(bt, img, heatmapFile);
+    }
+    else if (mode == "comp")
+    {
+        std::vector<Blomp::Image> images;
+        std::vector<std::string> files = { compFile, inFile };
+        for (auto& filename : files)
+        {
+            images.push_back(Blomp::Image(1, 1));
+            if (Blomp::endswith(filename, ".blp"))
+            {
+                std::cout << "Loading block tree..." << std::endl;
+                std::ifstream ifStream(filename, std::ios::binary | std::ios::in);
+                ifStream.read((char*)&fileHeader, sizeof(fileHeader));
+                Blomp::BitStream bitStream(ifStream);
+                ifStream.close();
+                auto bt = Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
+
+                images.back() = Blomp::Image(bt->getWidth(), bt->getHeight());
+                bt->writeToImg(images.back());
+            }
+            else
+            {
+                std::cout << "Loading image..." << std::endl;
+                images.back() = Blomp::Image(filename);
+            }
+        }
+
+        std::cout << "Comparing images..." << std::endl;
+        float similarity = Blomp::compareImages(images[0], images[1]);
+        
+        int64_t sizeComp = std::filesystem::file_size(files[0]);
+        int64_t sizeIn = std::filesystem::file_size(files[1]);
+        float dataRatio = float(sizeIn) / sizeComp;
+        
+        std::cout << "Results:" << std::endl;
+        std::cout << "  Similarity: " << similarity << std::endl;
+        std::cout << "  Data ratio: " << dataRatio << std::endl;
+        std::cout << "  Score:      " << ((similarity) * (1.0f - dataRatio)) << std::endl;
     }
     else
     {

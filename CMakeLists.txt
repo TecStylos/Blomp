@@ -21,6 +21,7 @@ add_executable(
     "src/BlockTree.cpp"
     "src/Blomp.cpp"
     "src/Image.cpp"
+    "src/ImgCompare.cpp"
     "vendor/stb_image/stb_image_write.cpp"
     "vendor/stb_image/stb_image.cpp"
 )

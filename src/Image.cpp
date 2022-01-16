@@ -5,6 +5,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "Tools.h"
+
 #include "stb_image_write.h"
 
 namespace Blomp
@@ -81,16 +83,11 @@ namespace Blomp
             [](unsigned char c){ return std::tolower(c); }
         );
 
-        auto endswith = [&](const std::string sub) -> bool
-        {
-            return filename.find(sub) == filename.size() - sub.size();
-        };
-
-        if (endswith(".png")) return ImageType::PNG;
-        if (endswith(".bmp")) return ImageType::BMP;
-        if (endswith(".tga")) return ImageType::TGA;
-        if (endswith(".jpg")) return ImageType::JPG;
-        if (endswith(".jpeg")) return ImageType::JPG;
+        if (endswith(filename, ".png")) return ImageType::PNG;
+        if (endswith(filename, ".bmp")) return ImageType::BMP;
+        if (endswith(filename, ".tga")) return ImageType::TGA;
+        if (endswith(filename, ".jpg")) return ImageType::JPG;
+        if (endswith(filename, ".jpeg")) return ImageType::JPG;
 
         return ImageType::UNKNOWN;
     }
