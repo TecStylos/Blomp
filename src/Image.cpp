@@ -128,12 +128,18 @@ namespace Blomp
 
     Pixel& Image::get(int x, int y)
     {
-        return m_buffer[y * width() + x];
+        uint64_t offset = y * width() + x;
+        if (offset >= m_buffer.size())
+            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
+        return m_buffer[offset];
     }
 
     const Pixel& Image::get(int x, int y) const
     {
-        return m_buffer[y * width() + x];
+        uint64_t offset = y * width() + x;
+        if (offset >= m_buffer.size())
+            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
+        return m_buffer[offset];
     }
 
     Pixel& Image::operator()(int x, int y)
@@ -172,5 +178,8 @@ namespace Blomp
         case ImageType::JPG: result = stbi_write_jpg(filename.c_str(), m_width, m_height, 3, data.data(), 90); break;
         case ImageType::UNKNOWN: throw std::runtime_error("Unknown filetype!");
         }
+
+        if (result == 0)
+            throw std::runtime_error("Unable to write image file.");
     }
 }

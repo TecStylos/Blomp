@@ -1,4 +1,5 @@
 #include "BitStream.h"
+#include <stdexcept>
 
 namespace Blomp
 {
@@ -15,8 +16,6 @@ namespace Blomp
     bool BitStream::readBit()
     {
         ++m_readOffset;
-        if (m_readOffset > m_size)
-            return false;
 
         return getBit(m_data.data(), m_readOffset - 1);
     }
@@ -74,6 +73,9 @@ namespace Blomp
 
     bool BitStream::getBit(const char* data, uint64_t offset) const
     {
+        if (offset >= m_size)
+            throw std::runtime_error("Unable to get out-of-bounds bit of bitstream.");
+
         uint64_t byte;
         uint64_t bit;
         splitOffset(byte, bit, offset);
@@ -83,6 +85,9 @@ namespace Blomp
 
     void BitStream::setBit(char* data, uint64_t offset, bool value)
     {
+        if (offset >= m_size)
+            throw std::runtime_error("Unable to set out-of-bounds bit of bitstream.");
+
         uint64_t byte;
         uint64_t bit;
         splitOffset(byte, bit, offset);

@@ -1,5 +1,6 @@
 #include "BlockTree.h"
 #include "Descriptors.h"
+#include <stdexcept>
 
 namespace Blomp
 {
@@ -35,7 +36,8 @@ namespace Blomp
             btDesc.maxDepth = bd.maxDepth;
             btDesc.variationThreshold = 0.0f;
 
-            bitStream.readBit();
+            if (!bitStream.readBit())
+                throw std::runtime_error("Unable to read damaged blomp file.");
 
             return ParentBlockRef(new ParentBlock(pbDesc, btDesc, bd.imgWidth, bd.imgHeight, bitStream));
         }

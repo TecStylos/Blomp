@@ -2,6 +2,7 @@
 #include "Descriptors.h"
 #include <algorithm>
 #include <math.h>
+#include <stdexcept>
 
 namespace Blomp
 {
@@ -35,6 +36,9 @@ namespace Blomp
 
     void ColorBlock::writeToImg(Image &img) const
     {
+        if (m_x + m_w > img.width() || m_y + m_h > img.height())
+            throw std::runtime_error("Image dimensions too small.");
+
         for (int x = m_x; x < m_x + m_w; ++x)
             for (int y = m_y; y < m_y + m_h; ++y)
                 img(x, y) = m_color;
@@ -42,6 +46,9 @@ namespace Blomp
 
     void ColorBlock::writeHeatmap(Image &img, int maxDepth, int depth) const
     {
+        if (m_x + m_w > img.width() || m_y + m_h > img.height())
+            throw std::runtime_error("Image dimensions too small.");
+
         Pixel color = 1.0f / maxDepth * depth;
         for (int x = m_x; x < m_x + m_w; ++x)
             for (int y = m_y; y < m_y + m_h; ++y)
@@ -173,6 +180,9 @@ namespace Blomp
 
     int ParentBlock::calcDimVal(int base, int depth)
     {
+        if (depth > base)
+            throw std::runtime_error("FATAL: depth > maxDepth!!!");
+
         return std::pow(2, base - depth);
     }
 
