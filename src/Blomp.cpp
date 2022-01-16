@@ -36,6 +36,7 @@ Options:
   -i [int]     Number of iterations for mode 'maxv'. Default: 10, Modes: maxv
   -c [string]  Comparison file. Modes: comp
   -q           Quiet. View less information. Modes: [all]
+  -b           Save blp with same name as input file ([inFile].blp). Modes: maxv
 
 Supported image formats:
   Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM
@@ -135,6 +136,7 @@ int main(int argc, const char** argv, const char** env)
     std::string compFile = "";
     int maxvIterations = 10;
     bool beQuiet = false;
+    bool maxvSaveBlp = false;
 
     if (argc < 2)
     {
@@ -252,6 +254,10 @@ int main(int argc, const char** argv, const char** env)
         else if (arg == "-q")
         {
             beQuiet = true;
+        }
+        else if (arg == "-b")
+        {
+            maxvSaveBlp = true;
         }
         else
         {
@@ -386,6 +392,11 @@ int main(int argc, const char** argv, const char** env)
             {
                 bt->writeToImg(img);
                 img.save(outFile);
+            }
+
+            if (maxvSaveBlp)
+            {
+                saveBlockTree(bt, btDesc.maxDepth, inFile + ".blp");
             }
 
             autoGenSaveHeatmap(bt, img, heatmapFile);

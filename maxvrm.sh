@@ -5,6 +5,6 @@ fi
 
 DIRECTORY=$1
 
-for file in $DIRECTORY/{*_DENC*,*_HEAT*}; do
+for file in $DIRECTORY/{*_DENC*,*_HEAT*,*.blp}; do
     rm $file
 done
