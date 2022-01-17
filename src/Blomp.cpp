@@ -17,6 +17,7 @@
 
 #define RETURN_MISSING_VALUE(option) { std::cout << "Missing value after option '" << (option) << "'."; return 1; }
 
+// TODO: Add long option names to help
 const char *helpText =
 R"(Usage:
   blomp [mode] [options] [inFile]
@@ -204,7 +205,7 @@ int main(int argc, const char** argv, const char** env)
         std::string arg = argv[i];
         bool invalidValue = false;
 
-        if (arg == "-d")
+        if (arg == "-d" || arg == "--depth")
         {
             ++i;
             if (i >= argc)
@@ -222,7 +223,7 @@ int main(int argc, const char** argv, const char** env)
                 invalidValue = true;
             }
         }
-        else if (arg == "-v")
+        else if (arg == "-v" || arg == "--variation")
         {
             ++i;
             if (i >= argc)
@@ -239,7 +240,7 @@ int main(int argc, const char** argv, const char** env)
                 invalidValue = true;
             }
         }
-        else if (arg == "-o")
+        else if (arg == "-o" || arg == "--output")
         {
             ++i;
             if (i >= argc)
@@ -247,7 +248,7 @@ int main(int argc, const char** argv, const char** env)
 
             outFile = argv[i];
         }
-        else if (arg == "-m")
+        else if (arg == "-m" || arg == "--heatmap")
         {
             ++i;
             if (i >= argc)
@@ -255,7 +256,7 @@ int main(int argc, const char** argv, const char** env)
             
             heatmapFile = argv[i];
         }
-        else if (arg == "-i")
+        else if (arg == "-i" || arg == "--iterations")
         {
             ++i;
             if (i >= argc)
@@ -273,7 +274,7 @@ int main(int argc, const char** argv, const char** env)
                 invalidValue = true;
             }
         }
-        else if (arg == "-c")
+        else if (arg == "-c" || arg == "--compfile")
         {
             ++i;
             if (i >= argc)
@@ -281,7 +282,7 @@ int main(int argc, const char** argv, const char** env)
 
             compFile = argv[i];
         }
-        else if (arg == "-s")
+        else if (arg == "-s" || arg == "--size")
         {
             ++i;
             if (i >= argc)
@@ -299,7 +300,7 @@ int main(int argc, const char** argv, const char** env)
                 invalidValue = true;
             }
         }
-        else if (arg == "-g")
+        else if (arg == "-g" || arg == "--genoutput")
         {
             ++i;
             if (i >= argc)
@@ -307,7 +308,7 @@ int main(int argc, const char** argv, const char** env)
            
             genFile = argv[i];
         }
-        else if (arg == "-q")
+        else if (arg == "-q" || arg == "--quiet")
         {
             beQuiet = true;
         }
