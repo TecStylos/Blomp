@@ -15,6 +15,8 @@
 #include "FileHeader.h"
 #include "ImgCompare.h"
 
+#define RETURN_MISSING_VALUE(option) { std::cout << "Missing value after option '" << (option) << "'."; return 1; }
+
 const char *helpText =
 R"(Usage:
   blomp [mode] [options] [inFile]
@@ -33,12 +35,12 @@ Options:
   -d [int]     Block depth. Default: 4, Range: 0-10, Modes: enc/dec/maxv/denc
   -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0, Modes: enc/denc
   -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc/maxv/opti
-  -m [string]  Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc/maxv/opti
+  -m [string]+ Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc/maxv/opti
   -i [int]     Number of iterations. Default: 10, Modes: maxv/opti
   -c [string]  Comparison file. Modes: comp
   -s [int]     File size to reach. Modes: maxv/opti
+  -g [string]+ Regenerated image filename. Modes: maxv/opti
   -q           Quiet. View less information. Modes: [all]
-  -b           Save blp with same name as input file ([inFile].blp). Modes: maxv/opti
 
 Supported image formats:
   Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM
@@ -47,8 +49,6 @@ Supported image formats:
    comp   X   X   X   X   X   X   X   X   X
   For more details see https://github.com/nothings/stb 
 )";
-
-// TODO: Mode: 'opt' -> Determine the optimal settings for a given input image (similar to maxv, but for '-d' and '-v') (Mby max file size?)
 
 uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
 {
@@ -179,9 +179,9 @@ int main(int argc, const char** argv, const char** env)
     std::string outFile = "";
     std::string heatmapFile = "";
     std::string compFile = "";
+    std::string genFile = "";
     int maxvIterations = 10;
     bool beQuiet = false;
-    bool saveBlp = false;
     uint64_t fsizeToReach = 0;
 
     if (argc < 2)
@@ -208,10 +208,8 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-d'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
+
             try 
             {
                 btDesc.maxDepth = std::stoi(argv[i]);
@@ -228,10 +226,7 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-v'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
             try 
             {
                 btDesc.variationThreshold = std::stof(argv[i]);
@@ -248,10 +243,7 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-o'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
 
             outFile = argv[i];
         }
@@ -259,21 +251,16 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-m'." << std::endl;
-                return 1;
-            }
-
+                RETURN_MISSING_VALUE(arg);
+            
             heatmapFile = argv[i];
         }
         else if (arg == "-i")
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-i'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
+
             try 
             {
                 maxvIterations = std::stoi(argv[i]);
@@ -290,10 +277,7 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-c'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
 
             compFile = argv[i];
         }
@@ -301,10 +285,8 @@ int main(int argc, const char** argv, const char** env)
         {
             ++i;
             if (i >= argc)
-            {
-                std::cout << "Missing value after option '-s'." << std::endl;
-                return 1;
-            }
+                RETURN_MISSING_VALUE(arg);
+
             try 
             {
                 fsizeToReach = std::stoi(argv[i]);
@@ -317,13 +299,17 @@ int main(int argc, const char** argv, const char** env)
                 invalidValue = true;
             }
         }
+        else if (arg == "-g")
+        {
+            ++i;
+            if (i >= argc)
+                RETURN_MISSING_VALUE(arg);
+           
+            genFile = argv[i];
+        }
         else if (arg == "-q")
         {
             beQuiet = true;
-        }
-        else if (arg == "-b")
-        {
-            saveBlp = true;
         }
         else
         {
@@ -344,29 +330,74 @@ int main(int argc, const char** argv, const char** env)
     }
 
 
-    while (outFile.empty())
+    while (true)
     {
-        std::string fileext = "";
+        std::string outExt = "";
+        std::string genExt = "";
         if (mode == "enc")
-            fileext = ".blp";
+            outExt = ".blp";
         else if (mode == "dec")
-            fileext = ".png";
+            outExt = ".png";
         else if (mode == "denc")
-            fileext = "_DENC.png";
-        else if (mode == "maxv")
+        {
+            outExt = "_DENC.png";
+            if (genFile == "+")
+                genExt = "_DENC.png";
+        }
+        else if (mode == "comp")
             break;
+        else if (mode == "maxv")
+        {
+            outExt = ".blp";
+            if (genFile == "+")
+                genExt = "_MAXV.png";
+        }
         else if (mode == "opti")
+        {
+            std::cout << "MODE____OPTI" << std::endl;
+            outExt = ".blp";
+            if (genFile == "+")
+                genExt = "_OPTI.png";
+        }
+        else if (mode == "info")
             break;
         else
-            fileext = ".UNKNOWN";
-        outFile = inFile.substr(0, inFile.find_last_of(".")) + fileext;
+            break;
+
+        if (!outExt.empty() && outFile.empty())
+            outFile = inFile.substr(0, inFile.find_last_of(".")) + outExt;
+        
+        if (!genExt.empty() && genFile == "+")
+            genFile = inFile.substr(0, inFile.find_last_of(".")) + genExt;
+
         break;
     }
 
+    if (heatmapFile == "+")
+        heatmapFile = inFile.substr(0, inFile.find_last_of(".")) + "_HEAT.png";
+    
+    std::cout << "Mode:      " << mode << std::endl;
+    std::cout << "MaxDepth:  " << btDesc.maxDepth << std::endl;
+    std::cout << "VarThres:  " << btDesc.variationThreshold << std::endl;
+    std::cout << "InFile:    " << inFile << std::endl;
+    std::cout << "OutFile:   " << outFile << std::endl;
+    std::cout << "HeatFile:  " << heatmapFile << std::endl;
+    std::cout << "CompFile:  " << compFile << std::endl;
+    std::cout << "GenFile:   " << genFile << std::endl;
+    std::cout << "MaxVIter:  " << maxvIterations << std::endl;
+    std::cout << "BeQuiet:   " << beQuiet << std::endl;
+    std::cout << "FSToReach: " << fsizeToReach << std::endl;
+
     try
     {
+        if (inFile.empty())
+            throw std::runtime_error("Missing input file.");
+
         if (mode == "enc")
         {
+            if (outFile.empty())
+                throw std::runtime_error("Missing output file.");
+
             Blomp::Image img(inFile);
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
@@ -379,6 +410,9 @@ int main(int argc, const char** argv, const char** env)
         }
         else if (mode == "dec")
         {
+            if (outFile.empty())
+                throw std::runtime_error("Missing output file.");
+
             auto bt = loadBlockTree(inFile);
 
             if (!beQuiet)
@@ -393,29 +427,39 @@ int main(int argc, const char** argv, const char** env)
         }
         else if (mode == "denc")
         {
+            if (outFile.empty())
+                throw std::runtime_error("Mising output file.");
+
             Blomp::Image img(inFile);
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
             if (!beQuiet)
                 viewBlockTreeInfo(bt, "%TEMP%");
 
-            bt->writeToImg(img);
-            img.save(outFile);
+            if (!genFile.empty())
+                saveBlockTree(bt, btDesc.maxDepth, genFile);
+
+            if (!outFile.empty())
+            {
+                bt->writeToImg(img);
+                img.save(outFile);
+            }
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
         }
         else if (mode == "comp")
         {
-            std::vector<Blomp::Image> images;
-            std::vector<std::string> files = { compFile, inFile };
-            for (auto& filename : files)
-                images.push_back(loadImage(filename));
+            if (compFile.empty())
+                throw std::runtime_error("Missing comparison file.");
+
+            Blomp::Image compImg = loadImage(compFile);
+            Blomp::Image inImg = loadImage(inFile);
 
             float similarity, dataRatio;
             float score = calcImgCompScore(
-                images[0], images[1],
-                std::filesystem::file_size(files[0]),
-                std::filesystem::file_size(files[1]),
+                compImg, inImg,
+                std::filesystem::file_size(compFile),
+                std::filesystem::file_size(inFile),
                 &similarity, &dataRatio
             );
 
@@ -426,6 +470,9 @@ int main(int argc, const char** argv, const char** env)
         }
         else if (mode == "maxv")
         {
+            if (outFile.empty())
+                throw std::runtime_error("Missing output file.");
+
             auto img = loadImage(inFile);
             if (!fsizeToReach)
                 fsizeToReach = std::filesystem::file_size(inFile);
@@ -435,19 +482,21 @@ int main(int argc, const char** argv, const char** env)
             std::cout << "MaxV result for '" << inFile << "':" << std::endl;
             std::cout << "  v:" << btDesc.variationThreshold << " -> fs: " << calcEstFileSize(bt) << " bytes" << std::endl;
 
-            if (!outFile.empty())
+            saveBlockTree(bt, btDesc.maxDepth, outFile);
+
+            if (!genFile.empty())
             {
                 bt->writeToImg(img);
-                img.save(outFile);
+                img.save(genFile);
             }
-
-            if (saveBlp)
-                saveBlockTree(bt, btDesc.maxDepth, inFile + ".blp");
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
         }
         else if (mode == "opti")
         {
+            if (outFile.empty())
+                throw std::runtime_error("Missing output file.");
+
             auto img = loadImage(inFile);
             uint64_t img1Size = std::filesystem::file_size(inFile);
             auto img2 = Blomp::Image(img.width(), img.height());
@@ -484,14 +533,13 @@ int main(int argc, const char** argv, const char** env)
             std::cout << "  d:" << best.btDesc.maxDepth << " v:" << best.btDesc.variationThreshold << std::endl;
             std::cout << "  -> fs: " << calcEstFileSize(best.bt) << " bytes" << std::endl;
 
-            if (!outFile.empty())
+            saveBlockTree(best.bt, best.btDesc.maxDepth, outFile);
+
+            if (!genFile.empty())
             {
                 best.bt->writeToImg(img2);
-                img2.save(outFile);
+                img2.save(genFile);
             }
-
-            if (saveBlp)
-                saveBlockTree(best.bt, best.btDesc.maxDepth, inFile + ".blp");
 
             autoGenSaveHeatmap(best.bt, img2, heatmapFile);
         }
