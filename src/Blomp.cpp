@@ -108,6 +108,8 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
 
     for (int i = 0; i < nIterations; ++i)
     {
+        ++nIterationsUsed;
+
         if (verbose)
             std::cout << "Iteration " << (i + 1) << "/" << nIterations << "  ->  ";
 
