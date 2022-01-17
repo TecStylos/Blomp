@@ -2,6 +2,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <filesystem>
@@ -16,7 +17,7 @@
 #include "ImgCompare.h"
 #include "BlompHelp.h"
 
-#define RETURN_MISSING_VALUE(option) { std::cout << "Missing value after option '" << (option) << "'."; return 1; }
+#define RETURN_MISSING_VALUE(option) { std::cout << "Missing value for option '" << (option) << "'."; return 1; }
 
 uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
 {
@@ -96,8 +97,14 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
 {
     Blomp::ParentBlockRef bt;
     int64_t sizeComp = 0;
+    int64_t prevSizeComp = std::numeric_limits<int>::max();
     btDesc.variationThreshold = 2.0f;
     float thresChange = 2.0f;
+
+    bool autoStop = (nIterations == 0);
+    if (autoStop) nIterations = std::numeric_limits<int>::max();
+
+    int numOfCloseComps = 0;
 
     for (int i = 0; i < nIterations; ++i)
     {
@@ -117,6 +124,19 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
 
         if (verbose)
             std::cout << "v:" << btDesc.variationThreshold << " fs:" << sizeComp << " bytes" << std::endl;
+
+        if (autoStop && std::abs(prevSizeComp - sizeComp) < 16)
+        {
+            if (++numOfCloseComps == 3)
+                break;
+        }
+        else
+            numOfCloseComps = 0;
+
+        if (btDesc.variationThreshold > 1.1f)
+            break;
+
+        prevSizeComp = sizeComp;
     }
 
     return bt;
@@ -228,7 +248,7 @@ int main(int argc, const char** argv, const char** env)
             {
                 maxvIterations = std::stoi(argv[i]);
 
-                if (maxvIterations < 1)
+                if (maxvIterations < 0)
                     invalidValue = true;
             }
             catch (std::exception e)
@@ -281,7 +301,7 @@ int main(int argc, const char** argv, const char** env)
 
         if (invalidValue)
         {
-            std::cout << "Invalid value after option '" << arg << "'." << std::endl;
+            std::cout << "Invalid value for option '" << arg << "'." << std::endl;
             return 1;
         }
     }
@@ -317,7 +337,6 @@ int main(int argc, const char** argv, const char** env)
         }
         else if (mode == "opti")
         {
-            std::cout << "MODE____OPTI" << std::endl;
             outExt = ".blp";
             if (genFile == "+")
                 genExt = "_OPTI.png";
