@@ -93,7 +93,7 @@ Blomp::Image loadImage(const std::string& filename)
     return img;
 }
 
-Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, int sizeToReach, int nIterations, bool verbose)
+Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, int sizeToReach, int nIterations, int& nIterationsUsed, bool verbose)
 {
     Blomp::ParentBlockRef bt;
     int64_t sizeComp = 0;
@@ -125,9 +125,9 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
         if (verbose)
             std::cout << "v:" << btDesc.variationThreshold << " fs:" << sizeComp << " bytes" << std::endl;
 
-        if (autoStop && std::abs(prevSizeComp - sizeComp) < 16)
+        if (autoStop && prevSizeComp == sizeComp)
         {
-            if (++numOfCloseComps == 3)
+            if (++numOfCloseComps == 5)
                 break;
         }
         else
@@ -456,9 +456,11 @@ int main(int argc, const char** argv, const char** env)
             if (!fsizeToReach)
                 fsizeToReach = std::filesystem::file_size(inFile);
 
-            auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, !beQuiet);
+            int nItersUsed = 0;
 
-            std::cout << "MaxV result for '" << inFile << "':" << std::endl;
+            auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
+
+            std::cout << "MaxV result for '" << inFile << "' after " << nItersUsed << " iterations:" << std::endl;
             std::cout << "  v:" << btDesc.variationThreshold << " -> fs: " << calcEstFileSize(bt) << " bytes" << std::endl;
 
             saveBlockTree(bt, btDesc.maxDepth, outFile);
@@ -490,12 +492,13 @@ int main(int argc, const char** argv, const char** env)
                 float score = 0.0f;
             } best;
 
+            int nItersUsed = 0;
             for (btDesc.maxDepth = 0; btDesc.maxDepth <= 10; ++btDesc.maxDepth)
             {
                 if (!beQuiet)
                     std::cout << "Running MaxV test " << (btDesc.maxDepth + 1) << "/11 ..." << std::endl;
 
-                auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, !beQuiet);
+                auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
                 bt->writeToImg(img2);
 
                 float score = calcImgCompScore(img, img2, img1Size, calcEstFileSize(bt));
@@ -508,7 +511,7 @@ int main(int argc, const char** argv, const char** env)
                 }
             }
 
-            std::cout << "Opti result for '" << inFile << "':" << std::endl;
+            std::cout << "Opti result for '" << inFile << "' after " << nItersUsed << " iterations:" << std::endl;
             std::cout << "  d:" << best.btDesc.maxDepth << " v:" << best.btDesc.variationThreshold << std::endl;
             std::cout << "  -> fs: " << calcEstFileSize(best.bt) << " bytes" << std::endl;
 
