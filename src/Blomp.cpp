@@ -14,42 +14,9 @@
 #include "Image.h"
 #include "FileHeader.h"
 #include "ImgCompare.h"
+#include "BlompHelp.h"
 
 #define RETURN_MISSING_VALUE(option) { std::cout << "Missing value after option '" << (option) << "'."; return 1; }
-
-// TODO: Add long option names to help
-const char *helpText =
-R"(Usage:
-  blomp [mode] [options] [inFile]
-
-Modes:
-  help         View this help.
-  enc          Convert an image file to a blomp file.
-  dec          Convert a blomp file to an image file.
-  denc         Shortcut for running 'enc' and 'dec'. Doesn't save the *.blp file.
-  comp         Compare two images with the same dimensions.
-  maxv         Optimize the '-v' options to reach a specified file size or the input file size.
-  opti         Optimize the '-d' and '-v' options to reach a specified file size or the input file size.
-  info         View information of a blomp file.
-
-Options:
-  -d [int]     Block depth. Default: 4, Range: 0-10, Modes: enc/dec/maxv/denc
-  -v [float]   Variation threshold. Default: 0.02, Range: 0.0 - 1.0, Modes: enc/denc
-  -o [string]  Output filename. Default: [inFile] with changed file extension. Modes: enc/dec/denc/maxv/opti
-  -m [string]+ Heatmap filename. Generate a compression heatmap if specified. Modes: enc/dec/denc/maxv/opti
-  -i [int]     Number of iterations. Default: 10, Modes: maxv/opti
-  -c [string]  Comparison file. Modes: comp
-  -s [int]     File size to reach. Modes: maxv/opti
-  -g [string]+ Regenerated image filename. Modes: maxv/opti
-  -q           Quiet. View less information. Modes: [all]
-
-Supported image formats:
-  Mode | JPG PNG TGA BMP PSD GIF HDR PIC PNM
-   enc    X   X   X   X   X   X   X   X   X
-   dec    X   X   X   X
-   comp   X   X   X   X   X   X   X   X   X
-  For more details see https://github.com/nothings/stb 
-)";
 
 uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
 {
@@ -114,18 +81,13 @@ void saveBlockTree(const Blomp::ParentBlockRef bt, int maxDepth, const std::stri
 
 Blomp::Image loadImage(const std::string& filename)
 {
-    Blomp::Image img(1, 1);
-    if (Blomp::endswith(filename, ".blp"))
-    {
-        auto bt = loadBlockTree(filename);
+    if (!Blomp::endswith(filename, ".blp"))
+        return Blomp::Image(filename);
 
-        img = Blomp::Image(bt->getWidth(), bt->getHeight());
-        bt->writeToImg(img);
-    }
-    else
-    {
-        img = Blomp::Image(filename);
-    }
+    auto bt = loadBlockTree(filename);
+
+    Blomp::Image img = Blomp::Image(bt->getWidth(), bt->getHeight());
+    bt->writeToImg(img);
 
     return img;
 }
@@ -196,7 +158,7 @@ int main(int argc, const char** argv, const char** env)
 
     if (mode == "help")
     {
-        std::cout << helpText;
+        std::cout << Blomp::getHelpText(argc > 2 ? argv[2] : "");
         return 1;
     }
 
@@ -377,17 +339,17 @@ int main(int argc, const char** argv, const char** env)
     if (heatmapFile == "+")
         heatmapFile = inFile.substr(0, inFile.find_last_of(".")) + "_HEAT.png";
     
-    std::cout << "Mode:      " << mode << std::endl;
-    std::cout << "MaxDepth:  " << btDesc.maxDepth << std::endl;
-    std::cout << "VarThres:  " << btDesc.variationThreshold << std::endl;
-    std::cout << "InFile:    " << inFile << std::endl;
-    std::cout << "OutFile:   " << outFile << std::endl;
-    std::cout << "HeatFile:  " << heatmapFile << std::endl;
-    std::cout << "CompFile:  " << compFile << std::endl;
-    std::cout << "GenFile:   " << genFile << std::endl;
-    std::cout << "MaxVIter:  " << maxvIterations << std::endl;
-    std::cout << "BeQuiet:   " << beQuiet << std::endl;
-    std::cout << "FSToReach: " << fsizeToReach << std::endl;
+    // std::cout << "Mode:      " << mode << std::endl;
+    // std::cout << "MaxDepth:  " << btDesc.maxDepth << std::endl;
+    // std::cout << "VarThres:  " << btDesc.variationThreshold << std::endl;
+    // std::cout << "InFile:    " << inFile << std::endl;
+    // std::cout << "OutFile:   " << outFile << std::endl;
+    // std::cout << "HeatFile:  " << heatmapFile << std::endl;
+    // std::cout << "CompFile:  " << compFile << std::endl;
+    // std::cout << "GenFile:   " << genFile << std::endl;
+    // std::cout << "MaxVIter:  " << maxvIterations << std::endl;
+    // std::cout << "BeQuiet:   " << beQuiet << std::endl;
+    // std::cout << "FSToReach: " << fsizeToReach << std::endl;
 
     try
     {
@@ -429,22 +391,19 @@ int main(int argc, const char** argv, const char** env)
         else if (mode == "denc")
         {
             if (outFile.empty())
-                throw std::runtime_error("Mising output file.");
+                throw std::runtime_error("Missing output file.");
 
             Blomp::Image img(inFile);
             auto bt = Blomp::BlockTree::fromImage(img, btDesc);
 
             if (!beQuiet)
-                viewBlockTreeInfo(bt, "%TEMP%");
+                viewBlockTreeInfo(bt, genFile.empty() ? "%TEMP%" : genFile);
 
             if (!genFile.empty())
                 saveBlockTree(bt, btDesc.maxDepth, genFile);
 
-            if (!outFile.empty())
-            {
-                bt->writeToImg(img);
-                img.save(outFile);
-            }
+            bt->writeToImg(img);
+            img.save(outFile);
 
             autoGenSaveHeatmap(bt, img, heatmapFile);
         }
