@@ -31,6 +31,7 @@ Options:
   -s [int]            (--size) File size to reach.
   -g [string]+   (--genoutput) Regenerated image filename.
   -q                 (--quiet) Quiet. View less information.
+  -f                  (--fast) Use faster opti approach. 
 
 Options with '+' have a default value when they are set to '+'.
 For more details to their default values see their corresponding
@@ -114,7 +115,7 @@ static const char* optimize =
 R"(Help - Mode: 'opti'
 Optimize the '-d' and '-v' options to reach the given file size.
 Available Options:
-    -o, -m, -i, -s, -g, -q
+    -o, -m, -i, -s, -g, -q, -f
 
 Input: Supported image file or blomp file
 Output: Blomp file
@@ -144,7 +145,7 @@ Description:
     decreasing the file size.
 
 Default: 4
-Range: 0 - 10
+Range: 1 - 8
 )";
 
 static const char* variation =
@@ -216,6 +217,13 @@ Description:
     Suppress non-important information.
 )";
 
+static const char* fast =
+R"(Help - Option: '-f/--fast'
+Description:
+    When set, the mode 'opti' returns the first
+    reasonable result.
+)";
+
 } // Namespace HelpText
 
 namespace Blomp
@@ -257,6 +265,8 @@ namespace Blomp
             return HelpText::genoutput;
         if (name == "-q" || name == "--quiet")
             return HelpText::quiet;
+        if (name == "-f" || name == "--fast")
+            return HelpText::fast;
 
         return "No help page available.\n";
     }

@@ -167,6 +167,7 @@ int main(int argc, const char** argv, const char** env)
     std::string genFile = "";
     int maxvIterations = 10;
     bool beQuiet = false;
+    bool optiFast = false;
     uint64_t fsizeToReach = 0;
 
     if (argc < 2)
@@ -199,7 +200,7 @@ int main(int argc, const char** argv, const char** env)
             {
                 btDesc.maxDepth = std::stoi(argv[i]);
 
-                if (btDesc.maxDepth < 0 || 10 < btDesc.maxDepth)
+                if (btDesc.maxDepth < 1 || 8 < btDesc.maxDepth)
                     invalidValue = true;
             }
             catch (std::exception e)
@@ -295,6 +296,10 @@ int main(int argc, const char** argv, const char** env)
         else if (arg == "-q" || arg == "--quiet")
         {
             beQuiet = true;
+        }
+        else if (arg == "-f" || arg == "--fast")
+        {
+            optiFast = true;
         }
         else
         {
@@ -495,10 +500,10 @@ int main(int argc, const char** argv, const char** env)
             } best;
 
             int nItersUsed = 0;
-            for (btDesc.maxDepth = 0; btDesc.maxDepth <= 10; ++btDesc.maxDepth)
+            for (btDesc.maxDepth = 1; btDesc.maxDepth <= 8; ++btDesc.maxDepth)
             {
                 if (!beQuiet)
-                    std::cout << "Running MaxV test " << (btDesc.maxDepth + 1) << "/11 ..." << std::endl;
+                    std::cout << "Running MaxV test " << btDesc.maxDepth << "/8 ..." << std::endl;
 
                 auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
 
@@ -507,13 +512,17 @@ int main(int argc, const char** argv, const char** env)
 
                 bt->writeToImg(img2);
 
-                float score = calcImgCompScore(img, img2, img1Size, calcEstFileSize(bt));
+                uint64_t estFileSize = calcEstFileSize(bt);
+                float score = calcImgCompScore(img, img2, img1Size, estFileSize);
 
                 if (score > best.score)
                 {
                     best.bt = bt;
                     best.btDesc = btDesc;
                     best.score = score;
+
+                    if (optiFast && std::abs((float)estFileSize / fsizeToReach - 1.0f) < 0.002f)
+                        break;
                 }
             }
 
