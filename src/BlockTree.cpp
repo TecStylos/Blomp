@@ -1,4 +1,5 @@
 #include "BlockTree.h"
+#include "BlockTreeGen.h"
 #include "Descriptors.h"
 #include <stdexcept>
 
@@ -6,24 +7,17 @@ namespace Blomp
 {
     namespace BlockTree
     {
-        ParentBlockRef fromImage(const Image &img, const BlockTreeDesc& btDesc)
+        BlockRef fromImage(const Image &img, const BlockTreeDesc& btDesc)
         {
-            ParentBlockDesc pbDesc;
-            pbDesc.x = 0;
-            pbDesc.y = 0;
-            pbDesc.width = img.width();
-            pbDesc.height = img.height();
-            pbDesc.depth = -1;
-
-            return ParentBlockRef(new ParentBlock(pbDesc, btDesc, img));
+            return createSubBlock(BlockDim(0, 0, img.width(), img.height()), -1, btDesc, img);
         }
 
-        void serialize(ParentBlockRef pbRef, BitStream& bitStream)
+        void serialize(BlockRef pbRef, BitStream& bitStream)
         {
             pbRef->serialize(bitStream);
         }
 
-        ParentBlockRef deserialize(BaseDescriptor bd, BitStream& bitStream)
+        BlockRef deserialize(BaseDescriptor bd, BitStream& bitStream)
         {
             ParentBlockDesc pbDesc;
             pbDesc.x = 0;
@@ -39,7 +33,7 @@ namespace Blomp
             if (!bitStream.readBit())
                 throw std::runtime_error("Unable to read damaged blomp file.");
 
-            return ParentBlockRef(new ParentBlock(pbDesc, btDesc, bd.imgWidth, bd.imgHeight, bitStream));
+            return BlockRef(new ParentBlock(pbDesc, btDesc, bd.imgWidth, bd.imgHeight, bitStream));
         }
     }
 }

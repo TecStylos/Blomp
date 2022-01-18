@@ -7,10 +7,10 @@ namespace Blomp
 {
     namespace BlockTree
     {
-        ParentBlockRef fromImage(const Image& img, const BlockTreeDesc& btDesc);
+        BlockRef fromImage(const Image& img, const BlockTreeDesc& btDesc);
 
-        void serialize(ParentBlockRef pbRef, BitStream& bitStream);
+        void serialize(BlockRef pbRef, BitStream& bitStream);
 
-        ParentBlockRef deserialize(BaseDescriptor bd, BitStream& bitStream);
+        BlockRef deserialize(BaseDescriptor bd, BitStream& bitStream);
     }
 }

@@ -1,36 +1,60 @@
 #include "Blocks.h"
+#include "BlockPool.h"
 #include "Descriptors.h"
 #include <algorithm>
+#include <memory>
 #include <stdexcept>
+
+#include "BlockTreeGen.h"
 
 namespace Blomp
 {
-    Block::Block(int x, int y, int w, int h)
-        : m_x(x), m_y(y), m_w(w), m_h(h)
+    Block::Block(BlockDim dimensions)
+        : m_dim(dimensions)
     {}
 
-    ColorBlock::ColorBlock(int x, int y, int w, int h, Pixel color)
-        : Block(x, y, w, h), m_color(color)
+    BlockType Block::getType() const
+    {
+        return BlockType::None;
+    }
+
+    Pixel Block::getColor() const
+    {
+        return Pixel(1.0f, 0.0f, 1.0f);
+    }
+
+    ColorBlock::ColorBlock(BlockDim dimensions, Pixel color)
+        : Block(dimensions), m_color(color)
     {}
+
+    BlockType ColorBlock::getType() const
+    {
+        return BlockType::Color;
+    }
+
+    Pixel ColorBlock::getColor() const
+    {
+        return m_color;
+    }
 
     void ColorBlock::writeToImg(Image &img) const
     {
-        if (m_x + m_w > img.width() || m_y + m_h > img.height())
+        if (m_dim.x + m_dim.w > img.width() || m_dim.y + m_dim.h > img.height())
             throw std::runtime_error("Image dimensions too small.");
 
-        for (int x = m_x; x < m_x + m_w; ++x)
-            for (int y = m_y; y < m_y + m_h; ++y)
+        for (int x = m_dim.x; x < m_dim.x + m_dim.w; ++x)
+            for (int y = m_dim.y; y < m_dim.y + m_dim.h; ++y)
                 img(x, y) = m_color;
     }
 
     void ColorBlock::writeHeatmap(Image &img, int maxDepth, int depth) const
     {
-        if (m_x + m_w > img.width() || m_y + m_h > img.height())
+        if (m_dim.x + m_dim.w > img.width() || m_dim.y + m_dim.h > img.height())
             throw std::runtime_error("Image dimensions too small.");
 
         Pixel color = 1.0f / maxDepth * depth;
-        for (int x = m_x; x < m_x + m_w; ++x)
-            for (int y = m_y; y < m_y + m_h; ++y)
+        for (int x = m_dim.x; x < m_dim.x + m_dim.w; ++x)
+            for (int y = m_dim.y; y < m_dim.y + m_dim.h; ++y)
                 img(x, y) = color;
     }
 
@@ -42,26 +66,41 @@ namespace Blomp
         bitStream.write(pixelData, 3 * 8);
     }
 
-    ParentBlock::ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, const Image& img)
-        : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
+    int ColorBlock::nBlocks() const
     {
-        int newDepth = pbDesc.depth + 1;
-        int blockDim = calcDimVal(btDesc.maxDepth, newDepth);
-
-        for (int y = m_y; y < (m_y + pbDesc.height) && y < img.height(); y += blockDim)
-            for (int x = m_x; x < (m_x + pbDesc.width) && x < img.width(); x += blockDim)
-                m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, img));
+        return 1;
     }
 
+    int ColorBlock::nColorBlocks() const
+    {
+        return 1;
+    }
+
+    ParentBlock::ParentBlock(BlockDim dimensions, const std::vector<BlockRef>& subBlocks)
+        : Block(dimensions), m_subBlocks(subBlocks)
+    {}
+
     ParentBlock::ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream)
-        : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
+        : Block(BlockDim(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height))
     {
         int newDepth = pbDesc.depth + 1;
-        int blockDim = calcDimVal(btDesc.maxDepth, newDepth);
+        int blockDim = BlockTree::calcDimVal(btDesc.maxDepth, newDepth);
 
-        for (int y = m_y; y < (m_y + pbDesc.height) && y < imgHeight; y += blockDim)
-            for (int x = m_x; x < (m_x + pbDesc.width) && x < imgWidth; x += blockDim)
+        for (int y = m_dim.y; y < (m_dim.y + pbDesc.height) && y < imgHeight; y += blockDim)
+            for (int x = m_dim.x; x < (m_dim.x + pbDesc.width) && x < imgWidth; x += blockDim)
                 m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, imgWidth, imgHeight, bitStream));
+    }
+
+    ParentBlock::~ParentBlock()
+    {
+        for (auto& block : m_subBlocks)
+            if (block->getType() == BlockType::Color)
+                ColorBlockPool.give(std::static_pointer_cast<ColorBlock>(block));
+    }
+
+    BlockType ParentBlock::getType() const
+    {
+        return BlockType::Parent;
     }
 
     void ParentBlock::writeToImg(Image &img) const
@@ -88,13 +127,7 @@ namespace Blomp
         int count = 1;
 
         for (auto block : m_subBlocks)
-        {
-            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
-            if (pb)
-                count += pb->nBlocks();
-            else
-                ++count;
-        }
+            count += block->nBlocks();
 
         return count;
     }
@@ -104,39 +137,16 @@ namespace Blomp
         int count = 0;
 
         for (auto block : m_subBlocks)
-        {
-            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
-            if (pb)
-                count += pb->nColorBlocks();
-            else
-                ++count;
-        }
+            count += block->nColorBlocks();
 
         return count;
-    }
-
-    BlockRef ParentBlock::createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, const Image& img)
-    {
-        BlockMetrics bm = calcBlockMetrics(x, y, btDesc.maxDepth, newDepth, img);
-
-        if (bm.variation <= btDesc.variationThreshold)
-            return BlockRef(new ColorBlock(x, y, bm.width, bm.height, bm.avgColor));
-
-        ParentBlockDesc pbDesc;
-        pbDesc.x = x;
-        pbDesc.y = y;
-        pbDesc.width = bm.width;
-        pbDesc.height = bm.height;
-        pbDesc.depth = newDepth;
-
-        return BlockRef(new ParentBlock(pbDesc, btDesc, img));
     }
 
     BlockRef ParentBlock::createSubBlock(int x, int y, int newDepth, const BlockTreeDesc& btDesc, int imgWidth, int imgHeight, BitStream& bitStream)
     {
         bool isParent = bitStream.readBit();
 
-        int maxDim = calcDimVal(btDesc.maxDepth, newDepth);
+        int maxDim = BlockTree::calcDimVal(btDesc.maxDepth, newDepth);
         int blockWidth = std::min(imgWidth - x, maxDim);
         int blockHeight = std::min(imgHeight - y, maxDim);
 
@@ -144,7 +154,7 @@ namespace Blomp
         {
             uint8_t pixelData[3];
             bitStream.read(pixelData, 3 * 8);
-            return BlockRef(new ColorBlock(x, y, blockWidth, blockHeight, Pixel::fromCharArray(pixelData)));
+            return BlockRef(new ColorBlock(BlockDim(x, y, blockWidth, blockHeight), Pixel::fromCharArray(pixelData)));
         }
 
         ParentBlockDesc pbDesc;
@@ -155,35 +165,5 @@ namespace Blomp
         pbDesc.depth = newDepth;
 
         return BlockRef(new ParentBlock(pbDesc, btDesc, imgWidth, imgHeight, bitStream));
-    }
-
-    BlockMetrics ParentBlock::calcBlockMetrics(int x, int y, int maxDepth, int newDepth, const Image& img)
-    {
-        BlockMetrics bm;
-
-        int maxDim = calcDimVal(maxDepth, newDepth);
-
-        bm.width = std::min(img.width() - x, maxDim);
-        bm.height = std::min(img.height() - y, maxDim);
-
-        for (int rx = x; rx < x + bm.width; ++rx)
-            for (int ry = y; ry < y + bm.height; ++ry)
-                bm.avgColor += img(rx, ry);
-
-        bm.avgColor /= (float)(bm.width * bm.height);
-
-        for (int rx = x; rx < x + bm.width; ++rx)
-        {
-            for (int ry = y; ry < y + bm.height; ++ry)
-            {
-                Pixel diff = bm.avgColor - img(rx, ry);
-                diff *= diff;
-                bm.variation += diff.r + diff.g + diff.b;
-            }
-        }
-
-        bm.variation /= (float)(bm.width * bm.height);
-
-        return bm;
     }
 }

@@ -17,8 +17,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 add_executable(
     Blomp
     "src/BitStream.cpp"
+    "src/BlockPool.cpp"
     "src/Blocks.cpp"
     "src/BlockTree.cpp"
+    "src/BlockTreeGen.cpp"
     "src/Blomp.cpp"
     "src/Image.cpp"
     "src/ImgCompare.cpp"

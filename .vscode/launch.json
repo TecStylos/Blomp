@@ -10,7 +10,7 @@
             "name": "Debug",
             "program": "${workspaceFolder}/bin/Debug/Blomp",
             //"args": [ "enc", "-w", "4", "-h", "4", "-v", "0.005", "-o", "nature.blp", "nature.jpg" ],
-            "args": [ "opti", "", "edge.jpg" ],
+            "args": [ "opti", "-g", "+", "-m", "+", "-i", "20", "edge.jpg" ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "buildDebugApplication"
         }

@@ -19,12 +19,12 @@
 
 #define RETURN_MISSING_VALUE(option) { std::cout << "Missing value for option '" << (option) << "'."; return 1; }
 
-uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
+uint64_t calcEstFileSize(Blomp::BlockRef bt)
 {
     return (sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + bt->nBlocks() + bt->nColorBlocks() * 3 * 8 + 7) / 8;
 }
 
-void viewBlockTreeInfo(Blomp::ParentBlockRef bt, const std::string& filename = "")
+void viewBlockTreeInfo(Blomp::BlockRef bt, const std::string& filename = "")
 {
     if (!filename.empty())
         std::cout << "BlockTree Info for '" << filename << "':" << std::endl;
@@ -33,7 +33,7 @@ void viewBlockTreeInfo(Blomp::ParentBlockRef bt, const std::string& filename = "
     std::cout << "  EstFileSize: " << calcEstFileSize(bt) << " bytes" << std::endl;
 }
 
-void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
+void autoGenSaveHeatmap(Blomp::BlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
 {
     if (heatmapFile.empty())
         return;
@@ -43,7 +43,7 @@ void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::
     img.save(heatmapFile);
 }
 
-Blomp::ParentBlockRef loadBlockTree(const std::string& filename)
+Blomp::BlockRef loadBlockTree(const std::string& filename)
 {
     Blomp::FileHeader fileHeader;
 
@@ -61,7 +61,7 @@ Blomp::ParentBlockRef loadBlockTree(const std::string& filename)
     return Blomp::BlockTree::deserialize(fileHeader.bd, bitStream);
 }
 
-void saveBlockTree(const Blomp::ParentBlockRef bt, int maxDepth, const std::string& filename)
+void saveBlockTree(const Blomp::BlockRef bt, int maxDepth, const std::string& filename)
 {
     Blomp::FileHeader fileHeader;
 
@@ -93,9 +93,9 @@ Blomp::Image loadImage(const std::string& filename)
     return img;
 }
 
-Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, int sizeToReach, int nIterations, int& nIterationsUsed, bool verbose)
+Blomp::BlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, int sizeToReach, int nIterations, int& nIterationsUsed, bool verbose)
 {
-    Blomp::ParentBlockRef bt;
+    Blomp::BlockRef bt;
     int64_t sizeComp = 0;
     int64_t prevSizeComp = std::numeric_limits<int>::max();
     btDesc.variationThreshold = 2.0f;
@@ -489,7 +489,7 @@ int main(int argc, const char** argv, const char** env)
 
             struct BestResult
             {
-                Blomp::ParentBlockRef bt;
+                Blomp::BlockRef bt;
                 Blomp::BlockTreeDesc btDesc;
                 float score = 0.0f;
             } best;
@@ -501,6 +501,10 @@ int main(int argc, const char** argv, const char** env)
                     std::cout << "Running MaxV test " << (btDesc.maxDepth + 1) << "/11 ..." << std::endl;
 
                 auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
+
+                if (bt->getType() != Blomp::BlockType::Parent)
+                    continue;
+
                 bt->writeToImg(img2);
 
                 float score = calcImgCompScore(img, img2, img1Size, calcEstFileSize(bt));
