@@ -124,17 +124,17 @@ namespace Blomp
 
     inline Pixel& Image::get(int x, int y)
     {
+        if (x >= m_width || y >= m_height)
+            throw std::runtime_error("Cannot retrieve out-of-bounds pixel of image.");
         uint64_t offset = y * width() + x;
-        if (offset >= m_buffer.size())
-            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
         return m_buffer[offset];
     }
 
     inline const Pixel& Image::get(int x, int y) const
     {
+        if (x >= m_width || y >= m_height)
+            throw std::runtime_error("Cannot retrieve out-of-bounds pixel of image.");
         uint64_t offset = y * width() + x;
-        if (offset >= m_buffer.size())
-            throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
         return m_buffer[offset];
     }
 
