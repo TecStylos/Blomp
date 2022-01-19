@@ -66,6 +66,7 @@ void saveBlockTree(const Blomp::ParentBlockRef bt, int maxDepth, const std::stri
     Blomp::FileHeader fileHeader;
 
     Blomp::BitStream bitStream;
+    bitStream.reserve(calcEstFileSize(bt));
     Blomp::BlockTree::serialize(bt, bitStream);
     fileHeader.bd.imgWidth = bt->getWidth();
     fileHeader.bd.imgHeight = bt->getHeight();

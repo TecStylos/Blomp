@@ -21,6 +21,7 @@ namespace Blomp
         template <typename T> void write(const T& src);
     public:
         void resize(uint64_t nBits);
+        void reserve(uint64_t nBits);
         void reset() noexcept;
     public:
         uint64_t size() const;
@@ -37,6 +38,7 @@ namespace Blomp
         uint64_t m_readOffset = 0;
         uint64_t m_writeOffset = 0;
         uint64_t m_size = 0;
+        uint64_t m_reserved = 0;
         std::vector<char> m_data;
     };
 
@@ -82,6 +84,24 @@ namespace Blomp
     {
         for (uint64_t i = 0; i < nBits; ++i)
             writeBit(getBit((const char*)src, srcOffset + i));
+    }
+
+    inline void BitStream::resize(uint64_t nBits)
+    {
+        m_size = nBits;
+        if (m_reserved < nBits)
+            reserve(nBits);
+    }
+
+    inline void BitStream::reserve(uint64_t nBits)
+    {
+        m_reserved = nBits + nBits / 2;
+        m_data.resize(BitStream::minBytes(m_reserved));
+    }
+
+    inline uint64_t BitStream::minBytes(uint64_t nBits)
+    {
+        return (nBits + 7) / 8;
     }
 
     inline uint64_t BitStream::size() const

@@ -7,4 +7,4 @@ echo "Building application..."
 ./build.sh RelWithDebInfo
 
 echo "Running callgrind..."
-valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes ./bin/RelWithDebInfo/Blomp enc edge.jpg
+valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes ./bin/RelWithDebInfo/Blomp enc sea.jpg

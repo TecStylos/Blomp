@@ -13,23 +13,12 @@ namespace Blomp
         iStream >> *this;
     }
 
-    void BitStream::resize(uint64_t nBits)
-    {
-        m_size = nBits;
-        m_data.resize(BitStream::minBytes(nBits));
-    }
-
     void BitStream::reset() noexcept
     {
         m_readOffset = 0;
         m_writeOffset = 0;
         m_size = 0;
         m_data.clear();
-    }
-
-    uint64_t BitStream::minBytes(uint64_t nBits)
-    {
-        return (nBits + 7) / 8;
     }
 
     std::istream& operator>>(std::istream& iStream, BitStream& bs)
