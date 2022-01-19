@@ -17,7 +17,7 @@ namespace Blomp
         {
             for (int x = 0; x < img1.width(); ++x)
             {
-                auto pixelDiff = img1(x, y) - img2(x, y);
+                auto pixelDiff = img1.getNC(x, y) - img2.getNC(x, y);
                 pixelDiff *= pixelDiff;
 
                 diffSum += (pixelDiff.r + pixelDiff.g + pixelDiff.b) / 3.0f;

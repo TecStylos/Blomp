@@ -18,9 +18,9 @@ namespace Blomp
         if (m_x + m_w > img.width() || m_y + m_h > img.height())
             throw std::runtime_error("Image dimensions too small.");
 
-        for (int x = m_x; x < m_x + m_w; ++x)
-            for (int y = m_y; y < m_y + m_h; ++y)
-                img(x, y) = m_color;
+        for (int y = m_y; y < m_y + m_h; ++y)
+            for (int x = m_x; x < m_x + m_w; ++x)
+                img.getNC(x, y) = m_color;
     }
 
     void ColorBlock::writeHeatmap(Image &img, int maxDepth, int depth) const
@@ -29,9 +29,9 @@ namespace Blomp
             throw std::runtime_error("Image dimensions too small.");
 
         Pixel color = 1.0f / maxDepth * depth;
-        for (int x = m_x; x < m_x + m_w; ++x)
-            for (int y = m_y; y < m_y + m_h; ++y)
-                img(x, y) = color;
+        for (int y = m_y; y < m_y + m_h; ++y)
+            for (int x = m_x; x < m_x + m_w; ++x)
+                img.getNC(x, y) = color;
     }
 
     void ColorBlock::serialize(BitStream &bitStream) const
@@ -166,17 +166,17 @@ namespace Blomp
         bm.width = std::min(img.width() - x, maxDim);
         bm.height = std::min(img.height() - y, maxDim);
 
-        for (int rx = x; rx < x + bm.width; ++rx)
-            for (int ry = y; ry < y + bm.height; ++ry)
-                bm.avgColor += img(rx, ry);
+        for (int ry = y; ry < y + bm.height; ++ry)
+            for (int rx = x; rx < x + bm.width; ++rx)
+                bm.avgColor += img.getNC(rx, ry);
 
         bm.avgColor /= (float)(bm.width * bm.height);
 
-        for (int rx = x; rx < x + bm.width; ++rx)
+        for (int ry = y; ry < y + bm.height; ++ry)
         {
-            for (int ry = y; ry < y + bm.height; ++ry)
+            for (int rx = x; rx < x + bm.width; ++rx)
             {
-                Pixel diff = bm.avgColor - img(rx, ry);
+                Pixel diff = bm.avgColor - img.getNC(rx, ry);
                 diff *= diff;
                 bm.variation += diff.r + diff.g + diff.b;
             }

@@ -41,6 +41,8 @@ namespace Blomp
         int height() const;
         Pixel& get(int x, int y);
         const Pixel& get(int x, int y) const;
+        Pixel& getNC(int x, int y);
+        const Pixel& getNC(int x, int y) const;
         Pixel& operator()(int x, int y);
         const Pixel& operator()(int x, int y) const;
     public:
@@ -124,18 +126,26 @@ namespace Blomp
 
     inline Pixel& Image::get(int x, int y)
     {
-        uint64_t offset = y * width() + x;
-        if (offset >= m_buffer.size())
+        if (x < 0 || width() <= x || y < 0 || height() <= y)
             throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
-        return m_buffer[offset];
+        return getNC(x, y);
     }
 
     inline const Pixel& Image::get(int x, int y) const
     {
-        uint64_t offset = y * width() + x;
-        if (offset >= m_buffer.size())
+        if (x < 0 || width() <= x || y < 0 || height() <= y)
             throw std::runtime_error("Cannot read out-of-bounds pixel of image.");
-        return m_buffer[offset];
+        return getNC(x, y);
+    }
+
+    inline Pixel& Image::getNC(int x, int y)
+    {
+        return m_buffer[y * width() + x];
+    }
+
+    inline const Pixel& Image::getNC(int x, int y) const
+    {
+        return m_buffer[y * width() + x];
     }
 
     inline Pixel& Image::operator()(int x, int y)
