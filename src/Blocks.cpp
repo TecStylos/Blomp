@@ -168,57 +168,46 @@ namespace Blomp
         bm.height = std::min(img.height() - y, maxDim);
         int nPixels = bm.width * bm.height;
 
-        for (int ry = y; ry < y + bm.height; ++ry)
-           for (int rx = x; rx < x + bm.width; ++rx)
-               bm.avgColor += img.getNC(rx, ry);
+        // for (int ry = y; ry < y + bm.height; ++ry)
+        //    for (int rx = x; rx < x + bm.width; ++rx)
+        //        bm.avgColor += img.getNC(rx, ry);
 
-        bm.avgColor /= nPixels;
+        // bm.avgColor /= nPixels;
 
-        for (int ry = y; ry < y + bm.height; ++ry)
-        {
-           for (int rx = x; rx < x + bm.width; ++rx)
-           {
-               Pixel diff = bm.avgColor - img.getNC(rx, ry);
-               diff *= diff;
-               bm.variation += diff.r + diff.g + diff.b;
-           }
-        }
+        // for (int ry = y; ry < y + bm.height; ++ry)
+        // {
+        //    for (int rx = x; rx < x + bm.width; ++rx)
+        //    {
+        //        Pixel diff = bm.avgColor - img.getNC(rx, ry);
+        //        diff *= diff;
+        //        bm.variation += diff.r + diff.g + diff.b;
+        //    }
+        // }
 
-        bm.variation /= nPixels;
+        // bm.variation /= nPixels;
 
         // v = (a - p1)^2 + (a - p2)^2 + ...
         // v = 2a^2 - 2a(p1 + p2 + ...) + p1^2 + p2^2 + ...
 
-        // Pixel pxSum, px2Sum;
-        // for (int ry = y; ry < y + bm.height; ++ry)
-        // {
-        //     for (int rx = x; rx < x + bm.width; ++rx)
-        //     {
-        //         const Pixel& px = img.getNC(rx, ry);
-        //         bm.avgColor += px;
-        //         pxSum += px;
-        //         px2Sum += px * px;
-        //     }
-        // }
+        Pixel pxSum, px2Sum;
+        for (int ry = y; ry < y + bm.height; ++ry)
+        {
+            for (int rx = x; rx < x + bm.width; ++rx)
+            {
+                const Pixel& px = img.getNC(rx, ry);
+                bm.avgColor += px;
+                pxSum += px;
+                px2Sum += px * px;
+            }
+        }
 
-        // bm.avgColor /= Pixel(nPixels);
+        bm.avgColor /= Pixel(nPixels);
 
-        // Pixel avg22 = Pixel(2.0f) * bm.avgColor * bm.avgColor;
-        // Pixel pxSumAvg2 = Pixel(2.0f) * bm.avgColor * pxSum;
-        // Pixel result = avg22 - pxSumAvg2 + px2Sum;
-        // result /= nPixels;
-        // bm.variation = result.r + result.g + result.b;
-        // //bm.variation /= nPixels;
-
-        // std::cout << "AvgCol:    " << bm.avgColor.r << "  " << bm.avgColor.g << "  " << bm.avgColor.b << std::endl;
-        // std::cout << "PxSum:     " << pxSum.r << "  " << pxSum.g << "  " << pxSum.b << std::endl;
-        // std::cout << "Px2Sum:    " << px2Sum.r << "  " << px2Sum.g << "  " << px2Sum.b << std::endl;
-        // std::cout << "Avg22:     " << avg22.r << "  " << avg22.g << "  " << avg22.b << std::endl;
-        // std::cout << "PxSumAvg2: " << pxSumAvg2.r << "  " << pxSumAvg2.g << "  " << pxSumAvg2.b << std::endl;
-        // std::cout << "Result:    " << result.r << "  " << result.g << "  " << result.b << std::endl;
-        // std::cout << "Dimens:    " << bm.width << "  " << bm.height << std::endl;
-        // std::cout << "Variat:    " << bm.variation << std::endl;
-        // std::cout << "-----" << std::endl;
+        Pixel avg22 = pxSum * bm.avgColor;
+        Pixel pxSumAvg2 = Pixel(2.0f) * bm.avgColor * pxSum;
+        Pixel result = avg22 - pxSumAvg2 + px2Sum;
+        bm.variation = result.r + result.g + result.b;
+        bm.variation /= nPixels;
 
         return bm;
     }
