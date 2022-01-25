@@ -43,6 +43,16 @@ namespace Blomp
         bitStream.write(pixelData, 3 * 8);
     }
 
+    int ColorBlock::nBlocks() const
+    {
+        return 1;
+    }
+
+    int ColorBlock::nColorBlocks() const
+    {
+        return 1;
+    }
+
     ParentBlock::ParentBlock(const ParentBlockDesc& pbDesc, const BlockTreeDesc& btDesc, const Image& img)
         : Block(pbDesc.x, pbDesc.y, pbDesc.width, pbDesc.height)
     {
@@ -60,8 +70,13 @@ namespace Blomp
         int newDepth = pbDesc.depth + 1;
         int blockDim = calcDimVal(btDesc.maxDepth, newDepth);
 
-        for (int y = m_y; y < (m_y + pbDesc.height) && y < imgHeight; y += blockDim)
-            for (int x = m_x; x < (m_x + pbDesc.width) && x < imgWidth; x += blockDim)
+        int maxX = std::min(m_x + pbDesc.width, imgWidth);
+        int maxY = std::min(m_y + pbDesc.height, imgHeight);
+
+        m_subBlocks.reserve(4);
+
+        for (int y = m_y; y < maxY; y += blockDim)
+            for (int x = m_x; x < maxX; x += blockDim)
                 m_subBlocks.push_back(createSubBlock(x, y, newDepth, btDesc, imgWidth, imgHeight, bitStream));
     }
 
@@ -89,13 +104,7 @@ namespace Blomp
         int count = 1;
 
         for (auto block : m_subBlocks)
-        {
-            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
-            if (pb)
-                count += pb->nBlocks();
-            else
-                ++count;
-        }
+            count += block->nBlocks();
 
         return count;
     }
@@ -105,13 +114,7 @@ namespace Blomp
         int count = 0;
 
         for (auto block : m_subBlocks)
-        {
-            const ParentBlock* pb = dynamic_cast<const ParentBlock*>(block.get());
-            if (pb)
-                count += pb->nColorBlocks();
-            else
-                ++count;
-        }
+            count += block->nColorBlocks();
 
         return count;
     }
@@ -168,24 +171,6 @@ namespace Blomp
         bm.height = std::min(img.height() - y, maxDim);
         int nPixels = bm.width * bm.height;
 
-        // for (int ry = y; ry < y + bm.height; ++ry)
-        //    for (int rx = x; rx < x + bm.width; ++rx)
-        //        bm.avgColor += img.getNC(rx, ry);
-
-        // bm.avgColor /= nPixels;
-
-        // for (int ry = y; ry < y + bm.height; ++ry)
-        // {
-        //    for (int rx = x; rx < x + bm.width; ++rx)
-        //    {
-        //        Pixel diff = bm.avgColor - img.getNC(rx, ry);
-        //        diff *= diff;
-        //        bm.variation += diff.r + diff.g + diff.b;
-        //    }
-        // }
-
-        // bm.variation /= nPixels;
-
         // v = (a - p1)^2 + (a - p2)^2 + ...
         // v = 2a^2 - 2a(p1 + p2 + ...) + p1^2 + p2^2 + ...
 
@@ -195,17 +180,14 @@ namespace Blomp
             for (int rx = x; rx < x + bm.width; ++rx)
             {
                 const Pixel& px = img.getNC(rx, ry);
-                bm.avgColor += px;
                 pxSum += px;
                 px2Sum += px * px;
             }
         }
 
-        bm.avgColor /= Pixel(nPixels);
+        bm.avgColor = pxSum /  Pixel(nPixels);
 
-        Pixel avg22 = pxSum * bm.avgColor;
-        Pixel pxSumAvg2 = Pixel(2.0f) * bm.avgColor * pxSum;
-        Pixel result = avg22 - pxSumAvg2 + px2Sum;
+        Pixel result = px2Sum - bm.avgColor * pxSum;
         bm.variation = result.r + result.g + result.b;
         bm.variation /= nPixels;
 

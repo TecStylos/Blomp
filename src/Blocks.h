@@ -29,6 +29,8 @@ namespace Blomp
         virtual void writeToImg(Image& img) const = 0;
         virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const = 0;
         virtual void serialize(BitStream& bitStream) const = 0;
+        virtual int nBlocks() const = 0;
+        virtual int nColorBlocks() const = 0;
     protected:
         int m_x, m_y;
         int m_w, m_h;
@@ -44,6 +46,8 @@ namespace Blomp
         virtual void writeToImg(Image& img) const override;
         virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const override;
         virtual void serialize(BitStream& bitStream) const override;
+        virtual int nBlocks() const override;
+        virtual int nColorBlocks() const override;
     protected:
         Pixel m_color;
     };
@@ -61,9 +65,8 @@ namespace Blomp
         virtual void writeToImg(Image& img) const override;
         virtual void writeHeatmap(Image& img, int maxDepth, int depth = -1) const override;
         virtual void serialize(BitStream& bitStream) const override;
-    public:
-        int nBlocks() const;
-        int nColorBlocks() const;
+        virtual int nBlocks() const override;
+        virtual int nColorBlocks() const override;
     protected:
         std::vector<BlockRef> m_subBlocks;
     protected:

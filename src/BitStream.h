@@ -15,8 +15,8 @@ namespace Blomp
     public:
         bool readBit();
         void writeBit(bool value);
-        void read(void* dest, uint64_t nBits, uint64_t destOffset = 0);
-        void write(const void* src, uint64_t nBits, uint64_t srcOffset = 0);
+        void read(void* dest, uint64_t nBits);
+        void write(const void* src, uint64_t nBits);
         template <typename T> void read(T& dest);
         template <typename T> void write(const T& src);
     public:
@@ -74,16 +74,16 @@ namespace Blomp
         setBit(m_data.data(), m_writeOffset - 1, value);
     }
 
-    inline void BitStream::read(void* dest, uint64_t nBits, uint64_t destOffset)
+    inline void BitStream::read(void* dest, uint64_t nBits)
     {
         for (uint64_t i = 0; i < nBits; ++i)
-            setBit((char*)dest, destOffset + i, readBit());
+            setBit((char*)dest, i, readBit());
     }
 
-    inline void BitStream::write(const void* src, uint64_t nBits, uint64_t srcOffset)
+    inline void BitStream::write(const void* src, uint64_t nBits)
     {
         for (uint64_t i = 0; i < nBits; ++i)
-            writeBit(getBit((const char*)src, srcOffset + i));
+            writeBit(getBit((const char*)src, i));
     }
 
     inline void BitStream::resize(uint64_t nBits)
