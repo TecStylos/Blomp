@@ -28,7 +28,7 @@ Options:
   -m [string]+     (--heatmap) Heatmap filename.
   -i [int]      (--iterations) Number of iterations.
   -c [string]     (--compfile) Comparison file.
-  -s [int]            (--size) File size to reach.
+  -x [target] [int] (--target) Target to reach.
   -g [string]+   (--genoutput) Regenerated image filename.
   -q                 (--quiet) Quiet. View less information.
 
@@ -97,9 +97,9 @@ Input: Supported image file or blomp file
 
 static const char* maxvariation =
 R"(Help - Mode: 'maxv'
-Optimize the '-v' option to reach the given file size.
+Optimize the '-v' option to reach the given target.
 Available Options:
-    -d, -o, -m, -i, -s, -g, -q
+    -d, -o, -m, -i, -x, -g, -q
 
 Input: Supported image file or blomp file
 Output: Blomp file
@@ -112,9 +112,9 @@ Defaults:
 
 static const char* optimize =
 R"(Help - Mode: 'opti'
-Optimize the '-d' and '-v' options to reach the given file size.
+Optimize the '-d' and '-v' options to reach the given target.
 Available Options:
-    -o, -m, -i, -s, -g, -q
+    -o, -m, -i, -x, -g, -q
 
 Input: Supported image file or blomp file
 Output: Blomp file
@@ -195,11 +195,18 @@ Description:
 )";
 
 static const char* size =
-R"(Help - Option: '-s/--size'
+R"(Help - Option: '-x/--target'
 Description:
-    Target file size for maxv calculations.
+    Target for maxv calculations.
 
-Default: Size of the input file.
+Target Values:
+    size
+    similarity
+
+Range (size): 1 - inf
+Range (similarity): 0 - 1000
+
+Default: size [inputFileSize]
 )";
 
 static const char* genoutput =
@@ -251,7 +258,7 @@ namespace Blomp
             return HelpText::iterations;
         if (name == "-c" || name == "--compfile")
             return HelpText::compfile;
-        if (name == "-s" || name == "--size")
+        if (name == "-x" || name == "--target")
             return HelpText::size;
         if (name == "-g" || name == "--genoutput")
             return HelpText::genoutput;

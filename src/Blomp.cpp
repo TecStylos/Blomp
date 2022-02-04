@@ -19,12 +19,12 @@
 
 #define RETURN_MISSING_VALUE(option) { std::cout << "Missing value for option '" << (option) << "'."; return 1; }
 
-uint64_t calcEstFileSize(Blomp::ParentBlockRef bt)
+uint64_t calcEstFileSize(const Blomp::ParentBlockRef bt)
 {
     return (sizeof(Blomp::FileHeader) * 8 + sizeof(uint64_t) * 8 + bt->nBlocks() + bt->nColorBlocks() * 3 * 8 + 7) / 8;
 }
 
-void viewBlockTreeInfo(Blomp::ParentBlockRef bt, const std::string& filename = "")
+void viewBlockTreeInfo(const Blomp::ParentBlockRef bt, const std::string& filename = "")
 {
     if (!filename.empty())
         std::cout << "BlockTree Info for '" << filename << "':" << std::endl;
@@ -33,7 +33,7 @@ void viewBlockTreeInfo(Blomp::ParentBlockRef bt, const std::string& filename = "
     std::cout << "  EstFileSize: " << calcEstFileSize(bt) << " bytes" << std::endl;
 }
 
-void autoGenSaveHeatmap(Blomp::ParentBlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
+void autoGenSaveHeatmap(const Blomp::ParentBlockRef bt, Blomp::Image& img, const std::string& heatmapFile)
 {
     if (heatmapFile.empty())
         return;
@@ -94,11 +94,9 @@ Blomp::Image loadImage(const std::string& filename)
     return img;
 }
 
-Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, int sizeToReach, int nIterations, int& nIterationsUsed, bool verbose)
+Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& btDesc, bool (targetFunc)(const Blomp::Image&, const Blomp::ParentBlockRef, uint64_t target), uint64_t targetValue, int nIterations, int& nIterationsUsed, bool verbose)
 {
     Blomp::ParentBlockRef bt;
-    int64_t sizeComp = 0;
-    int64_t prevSizeComp = std::numeric_limits<int>::max();
     btDesc.variationThreshold = 2.0f;
     float thresChange = 2.0f;
 
@@ -106,6 +104,8 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
     if (autoStop) nIterations = std::numeric_limits<int>::max();
 
     int numOfCloseComps = 0;
+
+    bool lastComparison = true;
 
     for (int i = 0; i < nIterations; ++i)
     {
@@ -116,21 +116,21 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
 
         thresChange /= 2.0f;
 
-        if (sizeComp < sizeToReach)
+        if (lastComparison)//(sizeComp < sizeToReach)
             btDesc.variationThreshold -= thresChange;
         else
             btDesc.variationThreshold += thresChange;
 
         bt = Blomp::BlockTree::fromImage(img, btDesc);
 
-        sizeComp = calcEstFileSize(bt);
+        bool comparison = targetFunc(img, bt, targetValue); //sizeComp = calcEstFileSize(bt);
 
         if (verbose)
-            std::cout << "v:" << btDesc.variationThreshold << " fs:" << sizeComp << " bytes" << std::endl;
+            std::cout << "v:" << btDesc.variationThreshold << "  LastComp: " << (lastComparison ? "true" : "false") << std::endl;
 
-        if (autoStop && prevSizeComp == sizeComp)
+        if (autoStop && lastComparison == comparison)
         {
-            if (++numOfCloseComps == 5)
+            if (++numOfCloseComps == 15)
                 break;
         }
         else
@@ -139,7 +139,7 @@ Blomp::ParentBlockRef calcMaxV(const Blomp::Image& img, Blomp::BlockTreeDesc& bt
         if (btDesc.variationThreshold > 1.1f)
             break;
 
-        prevSizeComp = sizeComp;
+        lastComparison = comparison;
     }
 
     return bt;
@@ -156,6 +156,19 @@ float calcImgCompScore(const Blomp::Image& img1, const Blomp::Image& img2, uint6
     return *pSimilarity / *pDataRatio;
 }
 
+bool targetSizeFunc(const Blomp::Image& img, const Blomp::ParentBlockRef bt, uint64_t value)
+{
+    return calcEstFileSize(bt) < value;
+}
+
+bool targetSimilarityFunc(const Blomp::Image& img, const Blomp::ParentBlockRef bt, uint64_t value)
+{
+    Blomp::Image btImg(img.width(), img.height());
+    bt->writeToImg(btImg);
+    float similarity = Blomp::compareImages(img, btImg);
+    return similarity < (float)value / 1000;
+}
+
 int main(int argc, const char** argv, const char** env)
 {
     Blomp::BlockTreeDesc btDesc;
@@ -168,7 +181,8 @@ int main(int argc, const char** argv, const char** env)
     std::string genFile = "";
     int maxvIterations = 10;
     bool beQuiet = false;
-    uint64_t fsizeToReach = 0;
+    std::string targetName = "size";
+    uint64_t targetValue = 0;
 
     if (argc < 2)
     {
@@ -267,17 +281,20 @@ int main(int argc, const char** argv, const char** env)
 
             compFile = argv[i];
         }
-        else if (arg == "-s" || arg == "--size")
+        else if (arg == "-x" || arg == "--target")
         {
-            ++i;
-            if (i >= argc)
+            if (i + 2 >= argc)
                 RETURN_MISSING_VALUE(arg);
 
-            try 
-            {
-                fsizeToReach = std::stoi(argv[i]);
+            targetName = argv[++i];
 
-                if (fsizeToReach < 1)
+            try
+            {
+                targetValue = std::stoi(argv[++i]);
+
+                if (targetName == "size" && targetValue < 1)
+                    invalidValue = true;
+                else if (targetName == "similarity" && targetValue > 1000)
                     invalidValue = true;
             }
             catch (std::exception e)
@@ -456,12 +473,18 @@ int main(int argc, const char** argv, const char** env)
                 throw std::runtime_error("Missing output file.");
 
             auto img = loadImage(inFile);
-            if (!fsizeToReach)
-                fsizeToReach = std::filesystem::file_size(inFile);
+            if (targetName == "size" && targetValue == 0)
+                targetValue = std::filesystem::file_size(inFile);
 
             int nItersUsed = 0;
 
-            auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
+            auto bt = calcMaxV(
+                img, btDesc,
+                targetName == "size" ? targetSizeFunc : targetSimilarityFunc,
+                targetValue,
+                maxvIterations, nItersUsed,
+                !beQuiet
+            );
 
             std::cout << "MaxV result for '" << inFile << "' after " << nItersUsed << " iterations:" << std::endl;
             std::cout << "  v:" << btDesc.variationThreshold << " -> fs: " << calcEstFileSize(bt) << " bytes" << std::endl;
@@ -485,8 +508,8 @@ int main(int argc, const char** argv, const char** env)
             uint64_t img1Size = std::filesystem::file_size(inFile);
             auto img2 = Blomp::Image(img.width(), img.height());
 
-            if (!fsizeToReach)
-                fsizeToReach = std::filesystem::file_size(inFile);
+            if (targetName == "size" && targetValue == 0)
+                targetValue = std::filesystem::file_size(inFile);
 
             struct BestResult
             {
@@ -501,10 +524,20 @@ int main(int argc, const char** argv, const char** env)
                 if (!beQuiet)
                     std::cout << "Running MaxV test " << (btDesc.maxDepth + 1) << "/11 ..." << std::endl;
 
-                auto bt = calcMaxV(img, btDesc, fsizeToReach, maxvIterations, nItersUsed, !beQuiet);
+                auto bt = calcMaxV(
+                    img, btDesc,
+                    targetName == "size" ? targetSizeFunc : targetSimilarityFunc,
+                    targetValue,
+                    maxvIterations, nItersUsed,
+                    !beQuiet
+                );
                 bt->writeToImg(img2);
 
-                float score = calcImgCompScore(img, img2, img1Size, calcEstFileSize(bt));
+                float score = 0.0f;
+                if (targetName == "size")
+                    score = calcImgCompScore(img, img2, img1Size, calcEstFileSize(bt));
+                else
+                    score = 1.0f / calcEstFileSize(bt);
 
                 if (score > best.score)
                 {
