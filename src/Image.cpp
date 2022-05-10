@@ -42,8 +42,8 @@ namespace Blomp
         if (!data)
             throw std::runtime_error("Unable to load file!");
 
-        if (nChannels != 3)
-            throw std::runtime_error("Wrong channel count!");
+        //if (nChannels != 3)
+        //    throw std::runtime_error("Wrong channel count!");
 
         m_buffer.clear();
         m_buffer.reserve(m_width * m_height);
